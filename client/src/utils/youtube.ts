@@ -68,3 +68,9 @@ export const PRESET_VIDEOS: PresetVideo[] = [
     thumbnail: 'https://img.youtube.com/vi/4xDzrJKXOOY/hqdefault.jpg',
   },
 ];
+
+export function getVideoTitle(videoId: string): string {
+  const found = PRESET_VIDEOS.find((p) => p.videoId === videoId);
+  if (found) return found.title;
+  return `YouTube Video (${videoId})`;
+}

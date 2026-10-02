@@ -57,12 +57,16 @@ class SocketService {
     this.getSocket().emit('leave_room', { roomId });
   }
 
-  public play(): void {
-    this.getSocket().emit('play');
+  public play(currentTime?: number): void {
+    this.getSocket().emit('play', typeof currentTime === 'number' ? { currentTime } : {});
   }
 
-  public pause(): void {
-    this.getSocket().emit('pause');
+  public pause(currentTime?: number): void {
+    this.getSocket().emit('pause', typeof currentTime === 'number' ? { currentTime } : {});
+  }
+
+  public syncTime(currentTime: number): void {
+    this.getSocket().emit('sync_time', { currentTime });
   }
 
   public seek(time: number): void {

@@ -11,10 +11,12 @@ declare global {
 interface YouTubePlayerProps {
   syncState: SyncStatePayload;
   userRole: UserRole;
-  onPlay: () => void;
-  onPause: () => void;
+  onPlay: (currentTime?: number) => void;
+  onPause: (currentTime?: number) => void;
   onSeek: (time: number) => void;
+  onSyncTime?: (currentTime: number) => void;
   onProgress?: (currentTime: number, duration: number) => void;
+  onDriftReport?: (driftMs: number, playbackRate: number) => void;
   reactions: EmojiReaction[];
 }
 
@@ -24,7 +26,9 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onPlay,
   onPause,
   onSeek: _onSeek,
+  onSyncTime,
   onProgress,
+  onDriftReport,
   reactions,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,7 +50,6 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
       if (!containerRef.current) return false;
 
-      // Clean up previous instance if any
       if (playerRef.current) {
         try {
           playerRef.current.destroy();
@@ -66,7 +69,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         videoId: syncState.videoId,
         playerVars: {
           autoplay: 1,
-          controls: canControl ? 1 : 0, // Disable native controls for participants to enforce RBAC
+          controls: canControl ? 1 : 0,
           disablekb: canControl ? 0 : 1,
           modestbranding: 1,
           rel: 0,
@@ -76,7 +79,6 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         events: {
           onReady: (event: any) => {
             setIsReady(true);
-            // Apply initial sync state
             const targetTime = syncState.currentTime;
             event.target.seekTo(targetTime, true);
             if (syncState.playState === 'playing') {
@@ -99,7 +101,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         if (initPlayer()) {
           clearInterval(checkInterval);
         }
-      }, 200);
+      }, 150);
     }
 
     return () => {
@@ -114,16 +116,14 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     };
   }, []);
 
-  // Update controls visibility when userRole changes
-  useEffect(() => {
-    // When role changes, if player is ready, reload to update controls parameter if needed
-  }, [userRole]);
-
-  // Handle local user actions in player (if allowed)
+  // Handle local user actions in player
   const handlePlayerStateChange = (state: number) => {
     if (isApplyingRemoteRef.current) {
       return;
     }
+
+    const player = playerRef.current;
+    const localTime = player?.getCurrentTime ? player.getCurrentTime() : 0;
 
     if (!canControl) {
       // Revert any unauthorized action by participants
@@ -138,12 +138,12 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     if (state === window.YT?.PlayerState?.PLAYING) {
       if (lastEmittedStateRef.current !== window.YT.PlayerState.PLAYING) {
         lastEmittedStateRef.current = window.YT.PlayerState.PLAYING;
-        onPlay();
+        onPlay(localTime);
       }
     } else if (state === window.YT?.PlayerState?.PAUSED) {
       if (lastEmittedStateRef.current !== window.YT.PlayerState.PAUSED) {
         lastEmittedStateRef.current = window.YT.PlayerState.PAUSED;
-        onPause();
+        onPause(localTime);
       }
     }
   };
@@ -172,59 +172,107 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       } else {
         // 2. Play/Pause state sync
         const ytState = player.getPlayerState();
-        if (syncState.playState === 'playing' && ytState !== window.YT.PlayerState.PLAYING) {
-          player.playVideo();
-        } else if (syncState.playState === 'paused' && ytState !== window.YT.PlayerState.PAUSED) {
-          player.pauseVideo();
+        if (syncState.playState === 'playing') {
+          if (ytState !== window.YT.PlayerState.PLAYING && ytState !== window.YT.PlayerState.BUFFERING) {
+            // Seek to exact current time before playing to avoid lag
+            player.seekTo(syncState.currentTime + 0.05, true);
+            player.playVideo();
+          }
+        } else if (syncState.playState === 'paused') {
+          if (ytState !== window.YT.PlayerState.PAUSED) {
+            player.pauseVideo();
+            player.seekTo(syncState.currentTime, true);
+          }
         }
 
-        // 3. Seek / Drift sync (if drift is greater than 1.5 seconds)
+        // 3. Sub-second Drift Compensation (Netflix/Teleparty algorithm)
         const localTime = player.getCurrentTime() || 0;
-        const drift = Math.abs(localTime - syncState.currentTime);
-        if (drift > 1.5) {
-          player.seekTo(syncState.currentTime, true);
+        const diff = syncState.currentTime - localTime; // positive means local is behind host
+        const absDrift = Math.abs(diff);
+
+        let rate = 1.0;
+
+        if (absDrift > 0.8) {
+          // Large drift (>800ms) -> Hard seek directly to host's target position
+          player.seekTo(syncState.currentTime + 0.04, true);
+          rate = 1.0;
+          try {
+            player.setPlaybackRate(1.0);
+          } catch (e) {}
+        } else if (diff >= 0.15 && diff <= 0.8) {
+          // Behind by 150ms - 800ms -> Smooth speedup (+8%) to catch up without audio cut
+          rate = 1.08;
+          try {
+            player.setPlaybackRate(1.08);
+          } catch (e) {}
+        } else if (diff <= -0.15 && diff >= -0.8) {
+          // Ahead by 150ms - 800ms -> Smooth slowdown (-8%)
+          rate = 0.92;
+          try {
+            player.setPlaybackRate(0.92);
+          } catch (e) {}
+        } else {
+          // Within 150ms -> Perfect synchronization
+          rate = 1.0;
+          try {
+            player.setPlaybackRate(1.0);
+          } catch (e) {}
+        }
+
+        if (onDriftReport) {
+          onDriftReport(Math.round(diff * 1000), rate);
         }
       }
 
-      // Reset applying remote flag after brief interval
       setTimeout(() => {
         isApplyingRemoteRef.current = false;
-      }, 500);
+      }, 350);
     } catch (err) {
       console.warn('Error applying video sync:', err);
       isApplyingRemoteRef.current = false;
     }
   }, [syncState, isReady]);
 
-  // Periodic progress polling for custom UI seekbar
+  // Periodic Host Sync Pulse & Scrubber Progress
   useEffect(() => {
     const interval = setInterval(() => {
       if (isReady && playerRef.current && playerRef.current.getCurrentTime) {
         try {
           const current = playerRef.current.getCurrentTime() || 0;
           const duration = playerRef.current.getDuration() || 0;
+
           if (onProgress) {
             onProgress(current, duration);
+          }
+
+          // If current user is Host/Mod and video is playing, send authoritative heartbeat pulse
+          if (canControl && syncState.playState === 'playing' && onSyncTime) {
+            onSyncTime(current);
           }
         } catch (e) {
           // ignore
         }
       }
-    }, 500);
+    }, 1000); // 1-second pulse keeps all users locked to <100ms drift
 
     return () => clearInterval(interval);
-  }, [isReady, onProgress]);
+  }, [isReady, canControl, syncState.playState, onProgress, onSyncTime]);
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 group">
+    <div className="relative w-full aspect-video bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group">
+      {/* Ambient Glow Backdrop */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-rose-600/20 via-purple-600/20 to-indigo-600/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition duration-1000 pointer-events-none -z-10" />
+
       {/* Player container */}
       <div ref={containerRef} className="w-full h-full pointer-events-auto" />
 
       {/* Role Protection Banner for Participants/Viewers */}
       {!canControl && (
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-700/60 flex items-center gap-2 pointer-events-none z-20">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-gray-300 font-medium">Syncing with Host</span>
+        <div className="absolute top-4 left-4 bg-gray-950/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-gray-700/60 flex items-center gap-2 pointer-events-none z-20 shadow-lg">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs text-gray-200 font-medium tracking-wide">
+            Synced with Host
+          </span>
         </div>
       )}
 
@@ -233,11 +281,13 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         {reactions.map((r) => (
           <div
             key={r.id}
-            style={{ left: `${r.xPercent}%`, bottom: '20px' }}
-            className="absolute flex flex-col items-center animate-float-up"
+            style={{ left: `${r.xPercent}%`, bottom: '24px' }}
+            className="absolute flex flex-col items-center animate-float-up pointer-events-none"
           >
-            <span className="text-4xl drop-shadow-md select-none">{r.emoji}</span>
-            <span className="text-[10px] bg-black/70 text-gray-200 px-1.5 py-0.5 rounded-full mt-0.5 backdrop-blur-xs font-mono">
+            <span className="text-4xl md:text-5xl drop-shadow-lg select-none filter">
+              {r.emoji}
+            </span>
+            <span className="text-[10px] bg-gray-950/80 text-gray-100 px-2 py-0.5 rounded-full mt-1 backdrop-blur-md font-mono border border-gray-700/50 shadow-md">
               {r.senderName}
             </span>
           </div>

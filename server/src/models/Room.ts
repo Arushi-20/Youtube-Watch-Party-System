@@ -230,12 +230,15 @@ export class Room {
    * Play playback
    * Requires Host or Moderator
    */
-  public play(requesterId: string): { success: boolean; error?: string } {
+  public play(requesterId: string, currentTime?: number): { success: boolean; error?: string } {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('play')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to play video' };
     }
 
+    if (typeof currentTime === 'number' && currentTime >= 0) {
+      this.videoState.currentTime = currentTime;
+    }
     this.videoState.playState = 'playing';
     this.videoState.lastUpdated = Date.now();
     return { success: true };
@@ -245,16 +248,37 @@ export class Room {
    * Pause playback
    * Requires Host or Moderator
    */
-  public pause(requesterId: string): { success: boolean; error?: string } {
+  public pause(requesterId: string, currentTime?: number): { success: boolean; error?: string } {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('pause')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to pause video' };
     }
 
-    this.videoState.currentTime = this.getCurrentPlaybackTime();
+    if (typeof currentTime === 'number' && currentTime >= 0) {
+      this.videoState.currentTime = currentTime;
+    } else {
+      this.videoState.currentTime = this.getCurrentPlaybackTime();
+    }
     this.videoState.playState = 'paused';
     this.videoState.lastUpdated = Date.now();
     return { success: true };
+  }
+
+  /**
+   * Periodic playback time sync pulse from Host/Mod
+   */
+  public updatePlaybackTime(requesterId: string, currentTime: number): boolean {
+    const participant = this.participants.get(requesterId);
+    if (!participant || !participant.canPerform('play')) {
+      return false;
+    }
+
+    if (typeof currentTime === 'number' && currentTime >= 0) {
+      this.videoState.currentTime = currentTime;
+      this.videoState.lastUpdated = Date.now();
+      return true;
+    }
+    return false;
   }
 
   /**

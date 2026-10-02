@@ -15,7 +15,19 @@ import { ControlsBar } from './components/ControlsBar';
 import { ParticipantList } from './components/ParticipantList';
 import { ChatPanel } from './components/ChatPanel';
 import { ChangeVideoModal } from './components/ChangeVideoModal';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
+import { getVideoTitle } from './utils/youtube';
+import {
+  AlertCircle,
+  ShieldAlert,
+  MessageSquare,
+  Users,
+  Maximize2,
+  Minimize2,
+  Share2,
+  Check,
+  Sparkles,
+  Zap,
+} from 'lucide-react';
 
 export function App() {
   // Navigation & User State
@@ -38,6 +50,15 @@ export function App() {
   });
   const [duration, setDuration] = useState<number>(0);
   const [localCurrentTime, setLocalCurrentTime] = useState<number>(0);
+
+  // Lag & Drift Diagnostics
+  const [driftMs, setDriftMs] = useState<number>(0);
+  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+
+  // UI Modes & Tabs
+  const [activeTab, setActiveTab] = useState<'chat' | 'members'>('chat');
+  const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
 
   // Room Data
   const [participants, setParticipants] = useState<ParticipantData[]>([]);
@@ -93,7 +114,6 @@ export function App() {
 
     socket.on('user_joined', (data: any) => {
       setParticipants(data.participants);
-      // If someone else joined, add chat notice
       if (data.userId !== userId) {
         setChatMessages((prev) => [
           ...prev,
@@ -151,7 +171,6 @@ export function App() {
       setKickedModal(true);
       setRoomId(null);
       setUserRole(null);
-      // Remove query param from url
       const url = new URL(window.location.href);
       url.searchParams.delete('room');
       window.history.pushState({}, '', url.toString());
@@ -166,11 +185,10 @@ export function App() {
         id: data.id,
         emoji: data.emoji,
         senderName: data.senderName,
-        xPercent: 15 + Math.random() * 70, // Random placement between 15% and 85%
+        xPercent: 15 + Math.random() * 70,
       };
       setReactions((prev) => [...prev, newReaction]);
 
-      // Remove after animation completes (2.5s)
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== data.id));
       }, 2500);
@@ -181,6 +199,8 @@ export function App() {
         if (prev.some((p) => p.requestId === req.requestId)) return prev;
         return [...prev, req];
       });
+      // Automatically switch to members tab if host/mod to approve easily
+      setActiveTab('members');
     });
 
     socket.on('control_request_sent', () => {
@@ -236,16 +256,20 @@ export function App() {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handlePlay = () => {
-    socketService.play();
+  const handlePlay = (time?: number) => {
+    socketService.play(time);
   };
 
-  const handlePause = () => {
-    socketService.pause();
+  const handlePause = (time?: number) => {
+    socketService.pause(time);
   };
 
   const handleSeek = (time: number) => {
     socketService.seek(time);
+  };
+
+  const handleSyncTime = (currentTime: number) => {
+    socketService.syncTime(currentTime);
   };
 
   const handleChangeVideo = (newVideoId: string) => {
@@ -281,9 +305,19 @@ export function App() {
     setControlRequests((prev) => prev.filter((r) => r.requestId !== requestId));
   };
 
+  const handleCopyShareLink = () => {
+    if (!roomId) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const isModOrHost = userRole === 'host' || userRole === 'moderator';
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950 text-gray-100">
-      {/* Navbar */}
+    <div className="min-h-screen flex flex-col bg-[#070b13] text-gray-100 selection:bg-rose-500 selection:text-white">
+      {/* Top Navbar */}
       <Navbar
         roomId={roomId}
         username={username}
@@ -293,9 +327,9 @@ export function App() {
 
       {/* Permission Denied / Error Toast */}
       {permissionError && (
-        <div className="fixed top-20 right-4 z-50 bg-rose-950 border border-rose-600 text-rose-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="fixed top-20 right-4 z-50 bg-rose-950/90 border border-rose-600/80 text-rose-100 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-200">
           <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
-          <span className="text-xs font-medium">{permissionError}</span>
+          <span className="text-xs font-semibold">{permissionError}</span>
         </div>
       )}
 
@@ -308,58 +342,206 @@ export function App() {
             onJoinRoom={handleJoinRoom}
           />
         ) : (
-          <div className="flex-1 p-3 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Left 8 cols: Video Player & Playback Controls */}
-            <div className="lg:col-span-8 flex flex-col gap-4">
-              <YouTubePlayer
-                syncState={syncState}
-                userRole={userRole || 'participant'}
-                onPlay={handlePlay}
-                onPause={handlePause}
-                onSeek={handleSeek}
-                onProgress={(curr, dur) => {
-                  setLocalCurrentTime(curr);
-                  setDuration(dur);
-                }}
-                reactions={reactions}
-              />
+          <div className="flex-1 p-3 md:p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-4">
+            {/* Video Header Bar */}
+            <div className="bg-gray-900/60 border border-gray-800/80 rounded-2xl px-4 py-3 shadow-lg backdrop-blur-md flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  <span>Now Playing</span>
+                </div>
+                <h2 className="text-sm md:text-base font-bold text-white truncate max-w-md md:max-w-xl">
+                  {getVideoTitle(syncState.videoId)}
+                </h2>
+              </div>
 
-              <ControlsBar
-                playState={syncState.playState}
-                currentTime={localCurrentTime}
-                duration={duration}
-                userRole={userRole || 'participant'}
-                onPlay={handlePlay}
-                onPause={handlePause}
-                onSeek={handleSeek}
-                onChangeVideoClick={() => setIsChangeVideoOpen(true)}
-                onRequestControl={handleRequestControl}
-                controlRequested={controlRequested}
-              />
+              {/* Header Right Actions */}
+              <div className="flex items-center gap-2">
+                {/* Drift / Sync Badge */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-950/70 border border-gray-800 text-xs font-mono text-gray-300">
+                  <Zap className={`w-3.5 h-3.5 ${Math.abs(driftMs) < 200 ? 'text-emerald-400' : 'text-amber-400'}`} />
+                  <span className="hidden sm:inline">Drift:</span>
+                  <span className="font-bold text-gray-200">{Math.abs(driftMs)}ms</span>
+                </div>
+
+                {/* Share Link Shortcut */}
+                <button
+                  onClick={handleCopyShareLink}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold transition active:scale-95 cursor-pointer"
+                >
+                  {copiedLink ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span className="hidden md:inline">Invite Friends</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Theater Mode Toggle */}
+                <button
+                  onClick={() => setIsTheaterMode(!isTheaterMode)}
+                  title={isTheaterMode ? 'Exit Theater Mode' : 'Enter Theater Mode'}
+                  className="p-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition active:scale-95 cursor-pointer"
+                >
+                  {isTheaterMode ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Right 4 cols: Participants & Live Chat */}
-            <div className="lg:col-span-4 flex flex-col gap-4 h-[650px] lg:h-auto">
-              <div className="h-64 shrink-0">
-                <ParticipantList
-                  participants={participants}
-                  currentUserId={userId}
-                  currentUserRole={userRole || 'participant'}
-                  onAssignRole={handleAssignRole}
-                  onRemoveParticipant={handleRemoveParticipant}
-                  onTransferHost={handleTransferHost}
-                  controlRequests={controlRequests}
-                  onRespondControl={handleRespondControl}
+            {/* Dashboard Grid Layout */}
+            <div
+              className={`grid gap-5 flex-1 transition-all ${
+                isTheaterMode
+                  ? 'grid-cols-1'
+                  : 'grid-cols-1 lg:grid-cols-12'
+              }`}
+            >
+              {/* Left Column: Player & Controls Bar */}
+              <div
+                className={`flex flex-col gap-4 ${
+                  isTheaterMode ? 'lg:col-span-12' : 'lg:col-span-8 xl:col-span-8'
+                }`}
+              >
+                <YouTubePlayer
+                  syncState={syncState}
+                  userRole={userRole || 'participant'}
+                  onPlay={handlePlay}
+                  onPause={handlePause}
+                  onSeek={handleSeek}
+                  onSyncTime={handleSyncTime}
+                  onProgress={(curr, dur) => {
+                    setLocalCurrentTime(curr);
+                    setDuration(dur);
+                  }}
+                  onDriftReport={(drift, rate) => {
+                    setDriftMs(drift);
+                    setPlaybackRate(rate);
+                  }}
+                  reactions={reactions}
+                />
+
+                <ControlsBar
+                  playState={syncState.playState}
+                  currentTime={localCurrentTime}
+                  duration={duration}
+                  userRole={userRole || 'participant'}
+                  driftMs={driftMs}
+                  playbackRate={playbackRate}
+                  onPlay={() => handlePlay(localCurrentTime)}
+                  onPause={() => handlePause(localCurrentTime)}
+                  onSeek={handleSeek}
+                  onChangeVideoClick={() => setIsChangeVideoOpen(true)}
+                  onRequestControl={handleRequestControl}
+                  controlRequested={controlRequested}
                 />
               </div>
 
-              <div className="flex-1 min-h-0">
-                <ChatPanel
-                  messages={chatMessages}
-                  currentUserId={userId}
-                  onSendMessage={handleSendMessage}
-                  onSendReaction={handleSendReaction}
-                />
+              {/* Right Column: Unified Right Sidebar (Chat & Members) */}
+              <div
+                className={`flex flex-col ${
+                  isTheaterMode
+                    ? 'lg:col-span-12 mt-2 h-[550px]'
+                    : 'lg:col-span-4 xl:col-span-4 h-[650px] lg:h-[calc(100vh-160px)] min-h-[500px]'
+                }`}
+              >
+                <div className="bg-gray-900/80 border border-gray-800/90 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-full overflow-hidden">
+                  {/* Segmented Tab Switcher */}
+                  <div className="p-2 border-b border-gray-800/80 bg-gray-950/40 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setActiveTab('chat')}
+                      className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition active:scale-95 cursor-pointer ${
+                        activeTab === 'chat'
+                          ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Live Chat</span>
+                      {chatMessages.length > 0 && (
+                        <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">
+                          {chatMessages.length}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('members')}
+                      className={`relative flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition active:scale-95 cursor-pointer ${
+                        activeTab === 'members'
+                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Members</span>
+                      <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">
+                        {participants.length}
+                      </span>
+                      {controlRequests.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Persistent Control Request Alert (if any pending) */}
+                  {isModOrHost && controlRequests.length > 0 && (
+                    <div className="p-2.5 bg-indigo-950/80 border-b border-indigo-700/50 flex items-center justify-between gap-2 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-1.5 text-xs text-indigo-200">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                        <span className="font-semibold">{controlRequests[0].username}</span>
+                        <span className="text-gray-300">wants controls</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleRespondControl(controlRequests[0].requestId, true)}
+                          className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold transition cursor-pointer"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRespondControl(controlRequests[0].requestId, false)}
+                          className="px-2 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] transition cursor-pointer"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Active Tab View */}
+                  <div className="flex-1 min-h-0">
+                    {activeTab === 'chat' ? (
+                      <ChatPanel
+                        messages={chatMessages}
+                        currentUserId={userId}
+                        hideHeader={true}
+                        onSendMessage={handleSendMessage}
+                        onSendReaction={handleSendReaction}
+                      />
+                    ) : (
+                      <ParticipantList
+                        participants={participants}
+                        currentUserId={userId}
+                        currentUserRole={userRole || 'participant'}
+                        hideHeader={true}
+                        onAssignRole={handleAssignRole}
+                        onRemoveParticipant={handleRemoveParticipant}
+                        onTransferHost={handleTransferHost}
+                        controlRequests={controlRequests}
+                        onRespondControl={handleRespondControl}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -376,14 +558,14 @@ export function App() {
 
       {/* Kicked Alert Modal */}
       {kickedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
-          <div className="bg-gray-900 border border-rose-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="bg-gray-900 border border-rose-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-white">Removed from Party</h3>
-            <p className="text-xs text-gray-400">
-              You were removed from this room by the host.
+            <p className="text-xs text-gray-400 leading-relaxed">
+              You have been removed from this room by the host.
             </p>
             <button
               onClick={() => setKickedModal(false)}
@@ -397,4 +579,5 @@ export function App() {
     </div>
   );
 }
+
 export default App;

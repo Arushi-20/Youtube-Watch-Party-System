@@ -5,6 +5,7 @@ import type { ChatMessage, UserRole } from '../types';
 interface ChatPanelProps {
   messages: ChatMessage[];
   currentUserId: string;
+  hideHeader?: boolean;
   onSendMessage: (text: string) => void;
   onSendReaction: (emoji: string) => void;
 }
@@ -14,6 +15,7 @@ const QUICK_EMOJIS = ['❤️', '🔥', '😂', '👏', '🍿', '🚀', '🎉', 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   currentUserId,
+  hideHeader = false,
   onSendMessage,
   onSendReaction,
 }) => {
@@ -49,18 +51,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 shadow-xl flex flex-col h-full">
+    <div className={`flex flex-col h-full ${hideHeader ? 'p-2' : 'bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-xl'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-rose-400" />
-          <h3 className="font-semibold text-sm text-gray-200">Live Party Chat</h3>
+      {!hideHeader && (
+        <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-rose-400" />
+            <h3 className="font-semibold text-sm text-gray-200">Live Party Chat</h3>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-gray-400">
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Real-time</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-[11px] text-gray-400">
-          <Sparkles className="w-3 h-3 text-amber-400" />
-          <span>Real-time</span>
-        </div>
-      </div>
+      )}
 
       {/* Messages Feed */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 text-sm">

@@ -17,6 +17,7 @@ interface ParticipantListProps {
   participants: ParticipantData[];
   currentUserId: string;
   currentUserRole: UserRole;
+  hideHeader?: boolean;
   onAssignRole: (userId: string, role: UserRole) => void;
   onRemoveParticipant: (userId: string) => void;
   onTransferHost: (userId: string) => void;
@@ -28,6 +29,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   participants,
   currentUserId,
   currentUserRole,
+  hideHeader = false,
   onAssignRole,
   onRemoveParticipant,
   onTransferHost,
@@ -68,17 +70,19 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 shadow-xl flex flex-col h-full">
+    <div className={`flex flex-col h-full ${hideHeader ? 'p-2' : 'bg-gray-900 border border-gray-800 rounded-2xl p-4 shadow-xl'}`}>
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
-        <div className="flex items-center gap-2">
-          <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-          <h3 className="font-semibold text-sm text-gray-200">Party Members</h3>
+      {!hideHeader && (
+        <div className="flex items-center justify-between pb-3 border-b border-gray-800 mb-3">
+          <div className="flex items-center gap-2">
+            <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <h3 className="font-semibold text-sm text-gray-200">Party Members</h3>
+          </div>
+          <span className="text-xs font-mono text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full">
+            {participants.length} online
+          </span>
         </div>
-        <span className="text-xs font-mono text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full">
-          {participants.length} online
-        </span>
-      </div>
+      )}
 
       {/* Pending Control Requests (Visible to Host/Moderator) */}
       {isModOrHost && controlRequests.length > 0 && (

@@ -25,13 +25,18 @@ export class WebSocketHandler {
       });
 
       // 3. Play
-      socket.on('play', () => {
-        this.handlePlay(socket);
+      socket.on('play', (data?: { currentTime?: number }) => {
+        this.handlePlay(socket, data);
       });
 
       // 4. Pause
-      socket.on('pause', () => {
-        this.handlePause(socket);
+      socket.on('pause', (data?: { currentTime?: number }) => {
+        this.handlePause(socket, data);
+      });
+
+      // Periodic Host Sync Pulse for sub-second synchronization
+      socket.on('sync_time', (data: { currentTime: number }) => {
+        this.handleSyncTime(socket, data);
       });
 
       // 5. Seek
@@ -158,7 +163,7 @@ export class WebSocketHandler {
     }
   }
 
-  private handlePlay(socket: Socket): void {
+  private handlePlay(socket: Socket, data?: { currentTime?: number }): void {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -166,7 +171,7 @@ export class WebSocketHandler {
     }
 
     const { room, participant } = userAndRoom;
-    const result = room.play(participant.id);
+    const result = room.play(participant.id, data?.currentTime);
 
     if (!result.success) {
       socket.emit('permission_denied', { action: 'play', error: result.error });
@@ -177,7 +182,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('sync_state', room.getSyncState());
   }
 
-  private handlePause(socket: Socket): void {
+  private handlePause(socket: Socket, data?: { currentTime?: number }): void {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -185,7 +190,7 @@ export class WebSocketHandler {
     }
 
     const { room, participant } = userAndRoom;
-    const result = room.pause(participant.id);
+    const result = room.pause(participant.id, data?.currentTime);
 
     if (!result.success) {
       socket.emit('permission_denied', { action: 'pause', error: result.error });
@@ -193,6 +198,20 @@ export class WebSocketHandler {
     }
 
     this.io.to(room.id).emit('sync_state', room.getSyncState());
+  }
+
+  private handleSyncTime(socket: Socket, data: { currentTime: number }): void {
+    const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
+    if (!userAndRoom || typeof data?.currentTime !== 'number') return;
+
+    const { room, participant } = userAndRoom;
+    if (participant.canPerform('play')) {
+      const updated = room.updatePlaybackTime(participant.id, data.currentTime);
+      if (updated) {
+        // Broadcast sync to other participants in the room
+        socket.to(room.id).emit('sync_state', room.getSyncState());
+      }
+    }
   }
 
   private handleSeek(socket: Socket, data: { time?: number }): void {
