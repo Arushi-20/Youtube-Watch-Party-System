@@ -1,15 +1,12 @@
 # 🎬 YouTube Watch Party System
 
-A production-grade, real-time synchronized **YouTube Watch Party System** built according to the Intern Assignment Specification. Multiple users across the globe can watch YouTube videos together in perfect synchronization with strict **Role-Based Access Control (RBAC)**, room management, live party chat, and floating emoji reactions.
+A real-time synchronized **YouTube Watch Party System** built according to the Intern Assignment Specification. Multiple users across the globe can watch YouTube videos together in perfect synchronization with strict **Role-Based Access Control (RBAC)**, room management, live party chat, and floating emoji reactions.
 
 ---
 
 ## 🌐 Live Deployment & Deliverables
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Arushi-20/Youtube-Watch-Party-System)
-
-- **1-Click Deployment:** Click the button above to auto-deploy to Render via Blueprint.
-- **Live Public URL:** [https://youtube-watch-party.onrender.com](https://youtube-watch-party.onrender.com) *(or your deployed Render/Railway URL)*
+- **Live Public URL:** [https://youtube-watch-party.onrender.com](https://youtube-watch-party-4y7v.onrender.com/) 
 - **Health Check Endpoint:** `GET /api/health`
 - **GitHub Repository:** Publicly accessible with complete source code and history.
 - **Automated Test Suite:** Built-in E2E integration test testing all 10 core WebSocket events (`npm test`).
@@ -25,6 +22,15 @@ A production-grade, real-time synchronized **YouTube Watch Party System** built 
 | **3. YouTube integration** | Play YouTube videos in sync for all room participants | Embedded YouTube IFrame API with responsive 16:9 aspect containment | ✅ Complete |
 | **4. WebSockets** | Real-time bidirectional communication between server and clients | Full-duplex Socket.IO events for instantaneous state broadcasts (<15ms latency) | ✅ Complete |
 | **5. Role-based access (RBAC)** | Rooms have roles; host assigns roles to participants | Host, Moderator, Participant, Viewer roles with strict backend permission enforcement | ✅ Complete |
+
+---
+
+## 💻 Tech Stack
+
+- **Frontend:** React 19 (JSX), Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
+- **Backend:** Node.js (ES Modules), Express 5, Socket.IO
+- **Video Integration:** YouTube IFrame Player API (with dynamic 16:9 containment)
+- **Automated Testing:** Node.js + Socket.IO Client E2E Test Suite (`server/test-e2e.js`)
 
 ---
 
@@ -97,15 +103,6 @@ To horizontally scale this architecture to support **1,000+ concurrent users and
 3. **Stateless Node Layer & Session Sticky Balancing**:
    - HTTP WebSocket handshake relies on sticky sessions (IP hash or session cookie).
    - Once upgraded to WebSocket, rooms are completely decoupled.
-
----
-
-## 💻 Tech Stack
-
-- **Frontend:** React 19 (JSX), Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
-- **Backend:** Node.js (ES Modules), Express 5, Socket.IO
-- **Video Integration:** YouTube IFrame Player API (with dynamic 16:9 containment)
-- **Automated Testing:** Node.js + Socket.IO Client E2E Test Suite (`server/test-e2e.js`)
 
 ---
 
@@ -228,3 +225,9 @@ The application is configured for deployment on **Render**:
      - `PORT`: `10000` (Render's default port)
 5. Click **Deploy Web Service**. Your live watch party will be live at `https://<your-service-name>.onrender.com`.
 
+---
+
+## ⚠️ Known Limitations & Future Work
+1. **Room state is stored in memory**, so rooms are lost when the server restarts, and the app runs on a single server instance.
+2. **Scaling idea:** to support many concurrent rooms across multiple servers, add the Socket.IO Redis adapter  with sticky sessions behind a load balancer.
+3. Free-tier hosting may cause slow first loads (cold starts).
