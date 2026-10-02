@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Clapperboard,
   Sparkles,
@@ -15,23 +15,24 @@ export const LobbyView = ({
   onJoinRoom,
 }) => {
   const [tab, setTab] = useState(initialRoomCode ? 'join' : 'create');
-  const [username, setUsername] = useState(
-    () => localStorage.getItem('watchparty_username') || ''
-  );
+  const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState(initialRoomCode || '');
   const [customCreateCode, setCustomCreateCode] = useState('');
+
+  // Clear any previously saved username from localStorage so it never auto-fills
+  useEffect(() => {
+    localStorage.removeItem('watchparty_username');
+  }, []);
 
   const handleCreate = (e) => {
     e.preventDefault();
     if (!username.trim()) return;
-    localStorage.setItem('watchparty_username', username.trim());
     onCreateRoom(username.trim(), customCreateCode.trim() || undefined);
   };
 
   const handleJoin = (e) => {
     e.preventDefault();
     if (!username.trim() || !roomCode.trim()) return;
-    localStorage.setItem('watchparty_username', username.trim());
     onJoinRoom(roomCode.trim().toUpperCase(), username.trim());
   };
 
@@ -167,6 +168,7 @@ export const LobbyView = ({
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your name"
@@ -204,6 +206,7 @@ export const LobbyView = ({
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your name"
