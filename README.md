@@ -6,6 +6,9 @@ A production-grade, real-time synchronized **YouTube Watch Party System** built 
 
 ## 🌐 Live Deployment & Deliverables
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Arushi-20/Youtube-Watch-Party-System)
+
+- **1-Click Deployment:** Click the button above to auto-deploy to Render via Blueprint.
 - **Live Public URL:** [https://youtube-watch-party.onrender.com](https://youtube-watch-party.onrender.com) *(or your deployed Render/Railway URL)*
 - **Health Check Endpoint:** `GET /api/health`
 - **GitHub Repository:** Publicly accessible with complete source code and history.
