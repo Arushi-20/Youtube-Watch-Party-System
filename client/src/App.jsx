@@ -320,8 +320,8 @@ export function App() {
             />
           </div>
         ) : (
-          <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden p-3 md:p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Left 8 cols: Video + Controls (Fixed height, no outer scrolling) */}
+          <div className="flex-1 min-h-0 lg:h-[calc(100vh-64px)] overflow-y-auto lg:overflow-hidden p-2.5 sm:p-3 md:p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4">
+            {/* Left 8 cols: Video + Controls */}
             <div className="lg:col-span-8 flex flex-col justify-between h-full overflow-hidden gap-2.5">
               {/* Compact Video Header Bar */}
               <div className="bg-[#111324]/80 border border-white/[0.08] rounded-xl px-4 py-2 shadow-sm backdrop-blur-md flex items-center justify-between shrink-0">
@@ -351,8 +351,8 @@ export function App() {
                 </div>
               </div>
 
-              {/* Player wrapper (Fits available space without pushing screen) */}
-              <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+              {/* Player wrapper (Fits available space without pushing screen or cutting video) */}
+              <div className="flex-1 min-h-[220px] w-full flex items-center justify-center overflow-hidden [container-type:size]">
                 <YouTubePlayer
                   playerWrapperRef={playerWrapperRef}
                   syncState={syncState}

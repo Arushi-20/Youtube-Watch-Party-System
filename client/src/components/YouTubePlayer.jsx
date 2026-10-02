@@ -15,10 +15,45 @@ export const YouTubePlayer = ({
   const containerRef = useRef(null);
   const playerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+  const [dimensions, setDimensions] = useState(null);
   const isApplyingRemoteRef = useRef(false);
   const lastEmittedStateRef = useRef(null);
 
   const canControl = userRole === 'host' || userRole === 'moderator';
+
+  // Responsive Containment: Dynamically calculate optimal 16:9 dimensions to fit inside parent container without clipping
+  useEffect(() => {
+    const parent = playerWrapperRef?.current?.parentElement;
+    if (!parent) return;
+
+    const updateSize = () => {
+      if (document.fullscreenElement) {
+        setDimensions(null);
+        return;
+      }
+      const pw = parent.clientWidth;
+      const ph = parent.clientHeight;
+      if (pw > 0 && ph > 0) {
+        // Fit within available parent dimensions preserving 16:9 aspect ratio
+        const targetW = Math.min(pw, ph * (16 / 9));
+        const targetH = targetW * (9 / 16);
+        setDimensions({
+          width: Math.floor(targetW),
+          height: Math.floor(targetH),
+        });
+      }
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(parent);
+    document.addEventListener('fullscreenchange', updateSize);
+
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('fullscreenchange', updateSize);
+    };
+  }, [playerWrapperRef]);
 
   // Initialize YouTube Player
   useEffect(() => {
@@ -242,13 +277,20 @@ export const YouTubePlayer = ({
   return (
     <div
       ref={playerWrapperRef}
-      className="relative w-full aspect-video bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group"
+      style={{
+        width: dimensions ? `${dimensions.width}px` : 'min(100cqw, calc(100cqh * 16 / 9))',
+        height: dimensions ? `${dimensions.height}px` : 'auto',
+      }}
+      className="relative aspect-video max-w-full max-h-full bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group shrink-0 fullscreen:w-screen fullscreen:h-screen fullscreen:max-w-none fullscreen:max-h-none fullscreen:rounded-none"
     >
       {/* Ambient Glow Backdrop */}
       <div className="absolute -inset-1 bg-gradient-to-r from-rose-600/20 via-purple-600/20 to-indigo-600/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition duration-1000 pointer-events-none -z-10" />
 
       {/* Player container */}
-      <div ref={containerRef} className="w-full h-full pointer-events-auto" />
+      <div
+        ref={containerRef}
+        className="absolute inset-0 w-full h-full pointer-events-auto [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:block [&>iframe]:border-0"
+      />
 
       {/* Role Protection Banner for Participants/Viewers */}
       {!canControl && (
