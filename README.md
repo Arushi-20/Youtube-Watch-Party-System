@@ -173,6 +173,62 @@ To horizontally scale this architecture to support **1,000+ concurrent users and
 
 ---
 
+## 📁 Project Directory & File Structure
+
+```text
+youtube-watch-party/
+├── .env.example                      # Sample environment variable template
+├── package.json                      # Monorepo root scripts (dev, build, test, install:all)
+├── README.md                         # Project documentation and assignment specification guide
+├── render.yaml                       # Infrastructure blueprint for automated Render deployment
+│
+├── client/                           # Frontend React SPA
+│   ├── index.html                    # HTML entry point with YouTube IFrame API script
+│   ├── package.json                  # Frontend dependencies and Vite build scripts
+│   ├── vite.config.js                # Vite configuration with API & WebSocket dev proxy
+│   ├── public/
+│   │   ├── favicon.svg               # Application browser favicon
+│   │   └── icons.svg                 # SVG sprite definitions
+│   └── src/
+│       ├── App.jsx                   # Root React component managing view switching (Lobby / Party)
+│       ├── App.css                   # Global styling and custom scrollbar overrides
+│       ├── index.css                 # Tailwind CSS v4 styles and directives
+│       ├── main.jsx                  # React DOM client entry point
+│       │
+│       ├── components/               # Modular UI Components
+│       │   ├── ChangeVideoModal.jsx  # Modal dialog for loading YouTube videos via URL or ID
+│       │   ├── ChatPanel.jsx         # Real-time room chat & floating emoji reactions bar
+│       │   ├── ControlsBar.jsx       # Custom video player controls (Play/Pause, Scrub, Time, Fullscreen)
+│       │   ├── LobbyView.jsx         # Landing page for creating a room or joining via 6-digit code
+│       │   ├── Navbar.jsx            # Top navigation bar with Room ID, Invite Link copy & Leave Room
+│       │   ├── ParticipantList.jsx   # Member list with role badges, host actions (Promote, Kick, Transfer)
+│       │   ├── RoomSidebar.jsx       # Collapsible sidebar containing Chat and Participants tabs
+│       │   └── YouTubePlayer.jsx     # YouTube IFrame wrapper with aspect containment & drift sync
+│       │
+│       ├── services/
+│       │   └── socket.js             # Socket.IO client instance and event dispatchers
+│       └── utils/
+│           └── youtube.js            # YouTube URL regex parser, ID extractor & time formatters
+│
+└── server/                           # Backend Application
+    ├── package.json                  # Server dependencies & test scripts
+    ├── test-e2e.js                   # Automated E2E integration test suite (10 WebSocket events)
+    └── src/
+        ├── server.js                 # Express server entry point, static asset delivery & Socket.IO init
+        │
+        ├── controllers/
+        │   └── WebSocketHandler.js   # Socket.IO event handler, request validation & broadcast router
+        │
+        ├── models/                   # Object-Oriented Domain Models (OOP)
+        │   ├── Participant.js        # Participant entity with granular RBAC permission checking
+        │   └── Room.js               # Central room state authority, timeline sync, RBAC & host re-election
+        │
+        └── services/
+            └── RoomManager.js        # In-memory room store, unique code generator & TTL cleanup service
+```
+
+---
+
 ## 🛠️ Quick Start & Local Setup
 
 ### Prerequisites
