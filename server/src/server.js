@@ -79,11 +79,11 @@ if (fs.existsSync(clientDistPath)) {
 }
 
 // Start HTTP + WebSocket Server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`===============================================`);
   console.log(`🚀 Watch Party Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready for connections`);
-  console.log(`🌍 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🌍 Health check: http://0.0.0.0:${PORT}/api/health`);
   console.log(`===============================================`);
 });
 
