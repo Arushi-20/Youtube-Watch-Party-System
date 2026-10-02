@@ -1,7 +1,7 @@
 /**
  * Extracts a YouTube Video ID from any standard YouTube URL or raw ID
  */
-export function extractYouTubeId(urlOrId: string): string | null {
+export function extractYouTubeId(urlOrId) {
   if (!urlOrId) return null;
   const input = urlOrId.trim();
 
@@ -19,7 +19,7 @@ export function extractYouTubeId(urlOrId: string): string | null {
 /**
  * Formats time in seconds to mm:ss or hh:mm:ss
  */
-export function formatTime(seconds: number): string {
+export function formatTime(seconds) {
   if (isNaN(seconds) || seconds < 0) return '00:00';
   const totalSeconds = Math.floor(seconds);
   const hours = Math.floor(totalSeconds / 3600);
@@ -35,14 +35,7 @@ export function formatTime(seconds: number): string {
   return `${paddedMins}:${paddedSecs}`;
 }
 
-export interface PresetVideo {
-  title: string;
-  category: string;
-  videoId: string;
-  thumbnail: string;
-}
-
-export const PRESET_VIDEOS: PresetVideo[] = [
+export const PRESET_VIDEOS = [
   {
     title: 'Lofi Hip Hop Radio - Beats to Relax/Study to',
     category: 'Music',
@@ -69,7 +62,7 @@ export const PRESET_VIDEOS: PresetVideo[] = [
   },
 ];
 
-export function getVideoTitle(videoId: string): string {
+export function getVideoTitle(videoId) {
   const found = PRESET_VIDEOS.find((p) => p.videoId === videoId);
   if (found) return found.title;
   return `YouTube Video (${videoId})`;

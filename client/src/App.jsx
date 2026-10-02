@@ -1,13 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { socketService } from './services/socket';
-import type {
-  UserRole,
-  SyncStatePayload,
-  ParticipantData,
-  ChatMessage,
-  EmojiReaction,
-  ControlRequestNotification,
-} from './types';
 import { Navbar } from './components/Navbar';
 import { LobbyView } from './components/LobbyView';
 import { YouTubePlayer } from './components/YouTubePlayer';
@@ -19,54 +11,54 @@ import { AlertCircle, ShieldAlert, Zap } from 'lucide-react';
 
 export function App() {
   // Navigation & User State
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>('');
-  const [userId] = useState<string>(() => {
+  const [roomId, setRoomId] = useState(null);
+  const [username, setUsername] = useState('');
+  const [userId] = useState(() => {
     const saved = sessionStorage.getItem('watchparty_userId');
     if (saved) return saved;
     const newId = 'usr_' + Math.random().toString(36).substring(2, 9);
     sessionStorage.setItem('watchparty_userId', newId);
     return newId;
   });
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userRole, setUserRole] = useState(null);
 
   // Video & Playback State
-  const [syncState, setSyncState] = useState<SyncStatePayload>({
+  const [syncState, setSyncState] = useState({
     playState: 'paused',
     currentTime: 0,
     videoId: 'jfKfPfyJRdk', // Default Lofi
   });
-  const [duration, setDuration] = useState<number>(0);
-  const [localCurrentTime, setLocalCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState(0);
+  const [localCurrentTime, setLocalCurrentTime] = useState(0);
 
   // Lag & Drift Diagnostics
-  const [driftMs, setDriftMs] = useState<number>(0);
-  const [playbackRate, setPlaybackRate] = useState<number>(1.0);
+  const [driftMs, setDriftMs] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1.0);
 
   // Room Data
-  const [participants, setParticipants] = useState<ParticipantData[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [reactions, setReactions] = useState<EmojiReaction[]>([]);
-  const [controlRequests, setControlRequests] = useState<ControlRequestNotification[]>([]);
-  const [controlRequested, setControlRequested] = useState<boolean>(false);
+  const [participants, setParticipants] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [reactions, setReactions] = useState([]);
+  const [controlRequests, setControlRequests] = useState([]);
+  const [controlRequested, setControlRequested] = useState(false);
 
   // Modals & Alerts
-  const [isChangeVideoOpen, setIsChangeVideoOpen] = useState<boolean>(false);
-  const [kickedModal, setKickedModal] = useState<boolean>(false);
-  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [isChangeVideoOpen, setIsChangeVideoOpen] = useState(false);
+  const [kickedModal, setKickedModal] = useState(false);
+  const [permissionError, setPermissionError] = useState(null);
 
   // Player Fullscreen ref (fullscreen applies ONLY to the video player container)
-  const playerWrapperRef = useRef<HTMLDivElement>(null);
+  const playerWrapperRef = useRef(null);
 
   // Check URL query parameters for direct invite link
-  const [urlRoomCode] = useState<string | undefined>(() => {
+  const [urlRoomCode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('room') || undefined;
   });
 
-  const errorTimeoutRef = useRef<any>(null);
+  const errorTimeoutRef = useRef(null);
 
-  const showErrorToast = (msg: string) => {
+  const showErrorToast = (msg) => {
     setPermissionError(msg);
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     errorTimeoutRef.current = setTimeout(() => {
@@ -78,7 +70,7 @@ export function App() {
   useEffect(() => {
     const socket = socketService.connect();
 
-    socket.on('joined_successfully', (data: any) => {
+    socket.on('joined_successfully', (data) => {
       setRoomId(data.roomId);
       setUserRole(data.role);
       setUsername(data.username);
@@ -94,11 +86,11 @@ export function App() {
       window.history.pushState({}, '', url.toString());
     });
 
-    socket.on('sync_state', (newSyncState: SyncStatePayload) => {
+    socket.on('sync_state', (newSyncState) => {
       setSyncState(newSyncState);
     });
 
-    socket.on('user_joined', (data: any) => {
+    socket.on('user_joined', (data) => {
       setParticipants(data.participants);
       if (data.userId !== userId) {
         setChatMessages((prev) => [
@@ -115,7 +107,7 @@ export function App() {
       }
     });
 
-    socket.on('user_left', (data: any) => {
+    socket.on('user_left', (data) => {
       setParticipants(data.participants);
       setChatMessages((prev) => [
         ...prev,
@@ -130,7 +122,7 @@ export function App() {
       ]);
     });
 
-    socket.on('role_assigned', (data: any) => {
+    socket.on('role_assigned', (data) => {
       setParticipants(data.participants);
       if (data.userId === userId) {
         setUserRole(data.role);
@@ -149,7 +141,7 @@ export function App() {
       ]);
     });
 
-    socket.on('participant_removed', (data: any) => {
+    socket.on('participant_removed', (data) => {
       setParticipants(data.participants);
     });
 
@@ -162,12 +154,12 @@ export function App() {
       window.history.pushState({}, '', url.toString());
     });
 
-    socket.on('chat_message', (msg: ChatMessage) => {
+    socket.on('chat_message', (msg) => {
       setChatMessages((prev) => [...prev, msg]);
     });
 
-    socket.on('reaction', (data: any) => {
-      const newReaction: EmojiReaction = {
+    socket.on('reaction', (data) => {
+      const newReaction = {
         id: data.id,
         emoji: data.emoji,
         senderName: data.senderName,
@@ -180,7 +172,7 @@ export function App() {
       }, 2500);
     });
 
-    socket.on('control_requested', (req: ControlRequestNotification) => {
+    socket.on('control_requested', (req) => {
       setControlRequests((prev) => {
         if (prev.some((p) => p.requestId === req.requestId)) return prev;
         return [...prev, req];
@@ -191,11 +183,11 @@ export function App() {
       setControlRequested(true);
     });
 
-    socket.on('permission_denied', (err: any) => {
+    socket.on('permission_denied', (err) => {
       showErrorToast(err.error || 'Permission denied for this action.');
     });
 
-    socket.on('error_message', (err: any) => {
+    socket.on('error_message', (err) => {
       showErrorToast(err.message || 'An error occurred.');
     });
 
@@ -217,12 +209,12 @@ export function App() {
   }, [userId]);
 
   // Actions
-  const handleCreateRoom = (name: string, customCode?: string) => {
+  const handleCreateRoom = (name, customCode) => {
     setUsername(name);
     socketService.joinRoom(customCode || '', name, userId);
   };
 
-  const handleJoinRoom = (targetRoomId: string, name: string) => {
+  const handleJoinRoom = (targetRoomId, name) => {
     setUsername(name);
     socketService.joinRoom(targetRoomId, name, userId);
   };
@@ -240,43 +232,43 @@ export function App() {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handlePlay = (time?: number) => {
+  const handlePlay = (time) => {
     socketService.play(time);
   };
 
-  const handlePause = (time?: number) => {
+  const handlePause = (time) => {
     socketService.pause(time);
   };
 
-  const handleSeek = (time: number) => {
+  const handleSeek = (time) => {
     socketService.seek(time);
   };
 
-  const handleSyncTime = (currentTime: number) => {
+  const handleSyncTime = (currentTime) => {
     socketService.syncTime(currentTime);
   };
 
-  const handleChangeVideo = (newVideoId: string) => {
+  const handleChangeVideo = (newVideoId) => {
     socketService.changeVideo(newVideoId);
   };
 
-  const handleAssignRole = (targetUserId: string, role: UserRole) => {
+  const handleAssignRole = (targetUserId, role) => {
     socketService.assignRole(targetUserId, role);
   };
 
-  const handleRemoveParticipant = (targetUserId: string) => {
+  const handleRemoveParticipant = (targetUserId) => {
     socketService.removeParticipant(targetUserId);
   };
 
-  const handleTransferHost = (targetUserId: string) => {
+  const handleTransferHost = (targetUserId) => {
     socketService.transferHost(targetUserId);
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = (text) => {
     socketService.sendChatMessage(text);
   };
 
-  const handleSendReaction = (emoji: string) => {
+  const handleSendReaction = (emoji) => {
     socketService.sendReaction(emoji);
   };
 
@@ -284,7 +276,7 @@ export function App() {
     socketService.requestControl();
   };
 
-  const handleRespondControl = (requestId: string, approve: boolean) => {
+  const handleRespondControl = (requestId, approve) => {
     socketService.respondControl(requestId, approve);
     setControlRequests((prev) => prev.filter((r) => r.requestId !== requestId));
   };

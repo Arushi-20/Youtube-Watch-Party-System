@@ -1,10 +1,11 @@
-import { io, Socket } from 'socket.io-client';
-import type { UserRole } from '../types';
+import { io } from 'socket.io-client';
 
 class SocketService {
-  private socket: Socket | null = null;
+  constructor() {
+    this.socket = null;
+  }
 
-  public connect(): Socket {
+  connect() {
     if (this.socket && this.socket.connected) {
       return this.socket;
     }
@@ -33,14 +34,14 @@ class SocketService {
     return this.socket;
   }
 
-  public getSocket(): Socket {
+  getSocket() {
     if (!this.socket) {
       return this.connect();
     }
     return this.socket;
   }
 
-  public disconnect(): void {
+  disconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
@@ -49,61 +50,61 @@ class SocketService {
 
   // --- Exact events from Assignment Specification ---
 
-  public joinRoom(roomId: string, username: string, userId: string): void {
+  joinRoom(roomId, username, userId) {
     this.getSocket().emit('join_room', { roomId, username, userId });
   }
 
-  public leaveRoom(roomId: string): void {
+  leaveRoom(roomId) {
     this.getSocket().emit('leave_room', { roomId });
   }
 
-  public play(currentTime?: number): void {
+  play(currentTime) {
     this.getSocket().emit('play', typeof currentTime === 'number' ? { currentTime } : {});
   }
 
-  public pause(currentTime?: number): void {
+  pause(currentTime) {
     this.getSocket().emit('pause', typeof currentTime === 'number' ? { currentTime } : {});
   }
 
-  public syncTime(currentTime: number): void {
+  syncTime(currentTime) {
     this.getSocket().emit('sync_time', { currentTime });
   }
 
-  public seek(time: number): void {
+  seek(time) {
     this.getSocket().emit('seek', { time });
   }
 
-  public changeVideo(videoId: string): void {
+  changeVideo(videoId) {
     this.getSocket().emit('change_video', { videoId });
   }
 
-  public assignRole(userId: string, role: UserRole): void {
+  assignRole(userId, role) {
     this.getSocket().emit('assign_role', { userId, role });
   }
 
-  public removeParticipant(userId: string): void {
+  removeParticipant(userId) {
     this.getSocket().emit('remove_participant', { userId });
   }
 
-  // --- Extended bonus actions ---
+  // --- Extended actions ---
 
-  public transferHost(userId: string): void {
+  transferHost(userId) {
     this.getSocket().emit('transfer_host', { userId });
   }
 
-  public sendChatMessage(message: string): void {
+  sendChatMessage(message) {
     this.getSocket().emit('chat_message', { message });
   }
 
-  public sendReaction(emoji: string): void {
+  sendReaction(emoji) {
     this.getSocket().emit('send_reaction', { emoji });
   }
 
-  public requestControl(): void {
+  requestControl() {
     this.getSocket().emit('request_control');
   }
 
-  public respondControl(requestId: string, approve: boolean): void {
+  respondControl(requestId, approve) {
     this.getSocket().emit('respond_control', { requestId, approve });
   }
 }

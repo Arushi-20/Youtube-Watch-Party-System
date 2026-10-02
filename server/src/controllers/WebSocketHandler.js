@@ -1,76 +1,71 @@
-import { Server, Socket } from 'socket.io';
 import { RoomManager } from '../services/RoomManager.js';
-import { UserRole } from '../types/index.js';
 
 export class WebSocketHandler {
-  private io: Server;
-  private roomManager: RoomManager;
-
-  constructor(io: Server) {
+  constructor(io) {
     this.io = io;
     this.roomManager = RoomManager.getInstance();
     this.setupListeners();
   }
 
-  private setupListeners(): void {
-    this.io.on('connection', (socket: Socket) => {
+  setupListeners() {
+    this.io.on('connection', (socket) => {
       // 1. Join Room
-      socket.on('join_room', (data: { roomId?: string; username?: string; userId?: string }) => {
+      socket.on('join_room', (data) => {
         this.handleJoinRoom(socket, data);
       });
 
       // 2. Leave Room
-      socket.on('leave_room', (data: { roomId?: string }) => {
+      socket.on('leave_room', (data) => {
         this.handleLeaveRoom(socket, data);
       });
 
       // 3. Play
-      socket.on('play', (data?: { currentTime?: number }) => {
+      socket.on('play', (data) => {
         this.handlePlay(socket, data);
       });
 
       // 4. Pause
-      socket.on('pause', (data?: { currentTime?: number }) => {
+      socket.on('pause', (data) => {
         this.handlePause(socket, data);
       });
 
       // Periodic Host Sync Pulse for sub-second synchronization
-      socket.on('sync_time', (data: { currentTime: number }) => {
+      socket.on('sync_time', (data) => {
         this.handleSyncTime(socket, data);
       });
 
       // 5. Seek
-      socket.on('seek', (data: { time?: number }) => {
+      socket.on('seek', (data) => {
         this.handleSeek(socket, data);
       });
 
       // 6. Change Video
-      socket.on('change_video', (data: { videoId?: string }) => {
+      socket.on('change_video', (data) => {
         this.handleChangeVideo(socket, data);
       });
 
       // 7. Assign Role
-      socket.on('assign_role', (data: { userId?: string; role?: UserRole }) => {
+      socket.on('assign_role', (data) => {
         this.handleAssignRole(socket, data);
       });
 
       // 8. Remove Participant (Kick)
-      socket.on('remove_participant', (data: { userId?: string }) => {
+      socket.on('remove_participant', (data) => {
         this.handleRemoveParticipant(socket, data);
       });
 
       // 9. Transfer Host
-      socket.on('transfer_host', (data: { userId?: string }) => {
+      socket.on('transfer_host', (data) => {
         this.handleTransferHost(socket, data);
       });
 
       // 10. Chat Message
-      socket.on('chat_message', (data: { message?: string }) => {
+      socket.on('chat_message', (data) => {
         this.handleChatMessage(socket, data);
       });
 
       // 11. Send Reaction
-      socket.on('send_reaction', (data: { emoji?: string }) => {
+      socket.on('send_reaction', (data) => {
         this.handleReaction(socket, data);
       });
 
@@ -80,7 +75,7 @@ export class WebSocketHandler {
       });
 
       // 13. Respond to Control Request
-      socket.on('respond_control', (data: { requestId?: string; approve?: boolean }) => {
+      socket.on('respond_control', (data) => {
         this.handleRespondControl(socket, data);
       });
 
@@ -91,10 +86,7 @@ export class WebSocketHandler {
     });
   }
 
-  private handleJoinRoom(
-    socket: Socket,
-    data: { roomId?: string; username?: string; userId?: string }
-  ): void {
+  handleJoinRoom(socket, data = {}) {
     const rawRoomId = data.roomId || this.roomManager.generateRoomCode();
     const roomId = rawRoomId.trim().toUpperCase();
     const username = (data.username && data.username.trim()) || 'Guest';
@@ -132,7 +124,7 @@ export class WebSocketHandler {
     });
   }
 
-  private handleLeaveRoom(socket: Socket, data: { roomId?: string }): void {
+  handleLeaveRoom(socket, data = {}) {
     const roomId = data.roomId || socket.data.roomId;
     if (!roomId) return;
 
@@ -163,7 +155,7 @@ export class WebSocketHandler {
     }
   }
 
-  private handlePlay(socket: Socket, data?: { currentTime?: number }): void {
+  handlePlay(socket, data) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -182,7 +174,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('sync_state', room.getSyncState());
   }
 
-  private handlePause(socket: Socket, data?: { currentTime?: number }): void {
+  handlePause(socket, data) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -200,7 +192,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('sync_state', room.getSyncState());
   }
 
-  private handleSyncTime(socket: Socket, data: { currentTime: number }): void {
+  handleSyncTime(socket, data) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom || typeof data?.currentTime !== 'number') return;
 
@@ -214,7 +206,7 @@ export class WebSocketHandler {
     }
   }
 
-  private handleSeek(socket: Socket, data: { time?: number }): void {
+  handleSeek(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -233,7 +225,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('sync_state', room.getSyncState());
   }
 
-  private handleChangeVideo(socket: Socket, data: { videoId?: string }): void {
+  handleChangeVideo(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -256,7 +248,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('sync_state', room.getSyncState());
   }
 
-  private handleAssignRole(socket: Socket, data: { userId?: string; role?: UserRole }): void {
+  handleAssignRole(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -285,7 +277,7 @@ export class WebSocketHandler {
     });
   }
 
-  private handleTransferHost(socket: Socket, data: { userId?: string }): void {
+  handleTransferHost(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -314,7 +306,7 @@ export class WebSocketHandler {
     });
   }
 
-  private handleRemoveParticipant(socket: Socket, data: { userId?: string }): void {
+  handleRemoveParticipant(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) {
       socket.emit('error_message', { message: 'Not connected to a room' });
@@ -350,7 +342,7 @@ export class WebSocketHandler {
     });
   }
 
-  private handleChatMessage(socket: Socket, data: { message?: string }): void {
+  handleChatMessage(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom || !data.message) return;
 
@@ -362,7 +354,7 @@ export class WebSocketHandler {
     }
   }
 
-  private handleReaction(socket: Socket, data: { emoji?: string }): void {
+  handleReaction(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom || !data.emoji) return;
 
@@ -378,7 +370,7 @@ export class WebSocketHandler {
     this.io.to(room.id).emit('reaction', reactionPayload);
   }
 
-  private handleRequestControl(socket: Socket): void {
+  handleRequestControl(socket) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) return;
 
@@ -401,10 +393,7 @@ export class WebSocketHandler {
     socket.emit('control_request_sent', { message: 'Control request submitted to host' });
   }
 
-  private handleRespondControl(
-    socket: Socket,
-    data: { requestId?: string; approve?: boolean }
-  ): void {
+  handleRespondControl(socket, data = {}) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom || !data.requestId) return;
 
@@ -421,7 +410,7 @@ export class WebSocketHandler {
     }
   }
 
-  private handleDisconnect(socket: Socket): void {
+  handleDisconnect(socket) {
     const userAndRoom = this.roomManager.findUserAndRoomBySocketId(socket.id);
     if (!userAndRoom) return;
 

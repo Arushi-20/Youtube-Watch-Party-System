@@ -1,27 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { SyncStatePayload, EmojiReaction, UserRole } from '../types';
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
-interface YouTubePlayerProps {
-  playerWrapperRef?: React.RefObject<HTMLDivElement | null>;
-  syncState: SyncStatePayload;
-  userRole: UserRole;
-  onPlay: (currentTime?: number) => void;
-  onPause: (currentTime?: number) => void;
-  onSeek: (time: number) => void;
-  onSyncTime?: (currentTime: number) => void;
-  onProgress?: (currentTime: number, duration: number) => void;
-  onDriftReport?: (driftMs: number, playbackRate: number) => void;
-  reactions: EmojiReaction[];
-}
-
-export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
+export const YouTubePlayer = ({
   playerWrapperRef,
   syncState,
   userRole,
@@ -33,17 +12,17 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onDriftReport,
   reactions,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const containerRef = useRef(null);
+  const playerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
   const isApplyingRemoteRef = useRef(false);
-  const lastEmittedStateRef = useRef<number | null>(null);
+  const lastEmittedStateRef = useRef(null);
 
   const canControl = userRole === 'host' || userRole === 'moderator';
 
   // Initialize YouTube Player
   useEffect(() => {
-    let checkInterval: any = null;
+    let checkInterval = null;
 
     const initPlayer = () => {
       if (!window.YT || !window.YT.Player) {
@@ -79,7 +58,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           enablejsapi: 1,
         },
         events: {
-          onReady: (event: any) => {
+          onReady: (event) => {
             setIsReady(true);
             const targetTime = syncState.currentTime;
             event.target.seekTo(targetTime, true);
@@ -89,7 +68,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
               event.target.pauseVideo();
             }
           },
-          onStateChange: (event: any) => {
+          onStateChange: (event) => {
             handlePlayerStateChange(event.data);
           },
         },
@@ -119,7 +98,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }, []);
 
   // Handle local user actions in player
-  const handlePlayerStateChange = (state: number) => {
+  const handlePlayerStateChange = (state) => {
     if (isApplyingRemoteRef.current) {
       return;
     }

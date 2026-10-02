@@ -1,29 +1,8 @@
-import { UserRole, ParticipantData } from '../types/index.js';
-
-export type ActionType =
-  | 'play'
-  | 'pause'
-  | 'seek'
-  | 'change_video'
-  | 'assign_role'
-  | 'remove_participant'
-  | 'transfer_host'
-  | 'respond_control'
-  | 'chat'
-  | 'react'
-  | 'request_control';
-
 export class Participant {
-  public readonly id: string;
-  public socketId: string;
-  public username: string;
-  public role: UserRole;
-  public readonly joinedAt: number;
-
-  constructor(id: string, socketId: string, username: string, role: UserRole = 'participant') {
+  constructor(id, socketId, username, role = 'participant') {
     this.id = id;
     this.socketId = socketId;
-    this.username = username.trim() || 'Anonymous';
+    this.username = (username && username.trim()) || 'Anonymous';
     this.role = role;
     this.joinedAt = Date.now();
   }
@@ -31,14 +10,14 @@ export class Participant {
   /**
    * Set user role (Host only can assign)
    */
-  public setRole(role: UserRole): void {
+  setRole(role) {
     this.role = role;
   }
 
   /**
    * Role-based permission check
    */
-  public canPerform(action: ActionType): boolean {
+  canPerform(action) {
     switch (this.role) {
       case 'host':
         // Host has full control
@@ -59,28 +38,28 @@ export class Participant {
   /**
    * Check if participant is host
    */
-  public isHost(): boolean {
+  isHost() {
     return this.role === 'host';
   }
 
   /**
    * Check if participant is moderator
    */
-  public isModerator(): boolean {
+  isModerator() {
     return this.role === 'moderator';
   }
 
   /**
    * Update socket ID on reconnect
    */
-  public updateSocketId(newSocketId: string): void {
+  updateSocketId(newSocketId) {
     this.socketId = newSocketId;
   }
 
   /**
    * JSON serialization helper
    */
-  public toJSON(): ParticipantData {
+  toJSON() {
     return {
       id: this.id,
       socketId: this.socketId,

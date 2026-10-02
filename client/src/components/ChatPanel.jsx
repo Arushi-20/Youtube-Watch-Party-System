@@ -1,18 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquare, Sparkles } from 'lucide-react';
-import type { ChatMessage, UserRole } from '../types';
-
-interface ChatPanelProps {
-  messages: ChatMessage[];
-  currentUserId: string;
-  hideHeader?: boolean;
-  onSendMessage: (text: string) => void;
-  onSendReaction: (emoji: string) => void;
-}
+import { MessageSquare, Sparkles } from 'lucide-react';
 
 const QUICK_EMOJIS = ['❤️', '🔥', '😂', '👏', '🍿', '🚀', '🎉', '🤯'];
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({
+export const ChatPanel = ({
   messages,
   currentUserId,
   hideHeader = false,
@@ -20,7 +11,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onSendReaction,
 }) => {
   const [inputText, setInputText] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -30,14 +21,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
     onSendMessage(inputText);
     setInputText('');
   };
 
-  const getRoleColor = (role: UserRole) => {
+  const getRoleColor = (role) => {
     switch (role) {
       case 'host':
         return 'text-amber-400';
@@ -109,15 +100,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Reaction Bar */}
-      <div className="py-2 flex items-center justify-between border-t border-gray-800/80 mt-2">
-        <span className="text-[11px] text-gray-400">React:</span>
-        <div className="flex items-center gap-1 overflow-x-auto py-1">
+      {/* Floating Emojis Reaction Row */}
+      <div className="py-2 flex items-center justify-between border-t border-gray-800 mt-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full py-1">
           {QUICK_EMOJIS.map((emoji) => (
             <button
               key={emoji}
+              type="button"
               onClick={() => onSendReaction(emoji)}
-              className="text-base hover:scale-130 active:scale-95 transition transform px-1"
+              className="text-base hover:scale-125 transition transform px-1 cursor-pointer"
               title={`React with ${emoji}`}
             >
               {emoji}
@@ -126,21 +117,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
       </div>
 
-      {/* Input Box */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-1">
+      {/* Input Form */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-2">
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Send a message..."
-          className="flex-1 bg-gray-800 text-gray-200 text-xs px-3 py-2 rounded-lg border border-gray-700 focus:outline-hidden focus:border-rose-500 transition placeholder:text-gray-500"
+          placeholder="Say something to the party..."
+          className="flex-1 bg-gray-800 text-gray-100 text-xs px-3.5 py-2.5 rounded-xl border border-gray-700 focus:outline-hidden focus:border-rose-500 transition placeholder:text-gray-500"
         />
         <button
           type="submit"
           disabled={!inputText.trim()}
-          className="p-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="p-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition shadow-lg shadow-rose-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
-          <Send className="w-3.5 h-3.5" />
+          <span className="text-xs font-semibold px-1">Send</span>
         </button>
       </form>
     </div>

@@ -7,30 +7,10 @@ import {
   Crown,
   Sparkles,
 } from 'lucide-react';
-import type {
-  ParticipantData,
-  ChatMessage,
-  UserRole,
-  ControlRequestNotification,
-} from '../types';
-
-interface RoomSidebarProps {
-  participants: ParticipantData[];
-  messages: ChatMessage[];
-  currentUserId: string;
-  currentUserRole: UserRole;
-  controlRequests: ControlRequestNotification[];
-  onSendMessage: (text: string) => void;
-  onSendReaction: (emoji: string) => void;
-  onAssignRole: (userId: string, role: UserRole) => void;
-  onRemoveParticipant: (userId: string) => void;
-  onTransferHost: (userId: string) => void;
-  onRespondControl: (requestId: string, approve: boolean) => void;
-}
 
 const QUICK_EMOJIS = ['❤️', '🔥', '😂', '👏', '🍿', '🚀', '🎉'];
 
-export const RoomSidebar: React.FC<RoomSidebarProps> = ({
+export const RoomSidebar = ({
   participants,
   messages,
   currentUserId,
@@ -44,8 +24,8 @@ export const RoomSidebar: React.FC<RoomSidebarProps> = ({
   onRespondControl,
 }) => {
   const [inputText, setInputText] = useState('');
-  const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [activeMenuUserId, setActiveMenuUserId] = useState(null);
+  const messagesEndRef = useRef(null);
 
   const isHost = currentUserRole === 'host';
   const isModOrHost = currentUserRole === 'host' || currentUserRole === 'moderator';
@@ -54,14 +34,14 @@ export const RoomSidebar: React.FC<RoomSidebarProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
     onSendMessage(inputText);
     setInputText('');
   };
 
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role) => {
     switch (role) {
       case 'host':
         return (
@@ -86,7 +66,7 @@ export const RoomSidebar: React.FC<RoomSidebarProps> = ({
     }
   };
 
-  const getAvatarBg = (username: string) => {
+  const getAvatarBg = (username) => {
     const colors = [
       'bg-orange-600',
       'bg-purple-600',

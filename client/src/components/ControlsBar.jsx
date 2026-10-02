@@ -10,26 +10,9 @@ import {
   Zap,
   Maximize,
 } from 'lucide-react';
-import type { UserRole, PlayState } from '../types';
 import { formatTime } from '../utils/youtube';
 
-interface ControlsBarProps {
-  playState: PlayState;
-  currentTime: number;
-  duration: number;
-  userRole: UserRole;
-  driftMs?: number;
-  playbackRate?: number;
-  onPlay: () => void;
-  onPause: () => void;
-  onSeek: (time: number) => void;
-  onChangeVideoClick: () => void;
-  onRequestControl: () => void;
-  controlRequested: boolean;
-  onToggleFullscreen?: () => void;
-}
-
-export const ControlsBar: React.FC<ControlsBarProps> = ({
+export const ControlsBar = ({
   playState,
   currentTime,
   duration,
@@ -50,7 +33,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   const canControl = userRole === 'host' || userRole === 'moderator';
   const isPlaying = playState === 'playing';
 
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSliderChange = (e) => {
     if (!canControl) return;
     const val = parseFloat(e.target.value);
     setScrubValue(val);

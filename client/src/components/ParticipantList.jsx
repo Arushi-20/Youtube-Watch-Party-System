@@ -11,21 +11,8 @@ import {
   X,
   Radio,
 } from 'lucide-react';
-import type { ParticipantData, UserRole, ControlRequestNotification } from '../types';
 
-interface ParticipantListProps {
-  participants: ParticipantData[];
-  currentUserId: string;
-  currentUserRole: UserRole;
-  hideHeader?: boolean;
-  onAssignRole: (userId: string, role: UserRole) => void;
-  onRemoveParticipant: (userId: string) => void;
-  onTransferHost: (userId: string) => void;
-  controlRequests: ControlRequestNotification[];
-  onRespondControl: (requestId: string, approve: boolean) => void;
-}
-
-export const ParticipantList: React.FC<ParticipantListProps> = ({
+export const ParticipantList = ({
   participants,
   currentUserId,
   currentUserRole,
@@ -36,12 +23,12 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
   controlRequests,
   onRespondControl,
 }) => {
-  const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
+  const [activeMenuUserId, setActiveMenuUserId] = useState(null);
 
   const isHost = currentUserRole === 'host';
   const isModOrHost = currentUserRole === 'host' || currentUserRole === 'moderator';
 
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role) => {
     switch (role) {
       case 'host':
         return (
@@ -99,18 +86,18 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                 <span className="font-semibold text-white">{req.username}</span>
                 <span className="text-gray-400"> wants controls</span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => onRespondControl(req.requestId, true)}
-                  title="Approve (Promote to Moderator)"
-                  className="p-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white transition"
+                  className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                  title="Approve Moderator"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onRespondControl(req.requestId, false)}
-                  title="Decline"
-                  className="p-1.5 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition"
+                  className="p-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white cursor-pointer"
+                  title="Deny"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -120,32 +107,29 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
         </div>
       )}
 
-      {/* Participants List */}
-      <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
+      {/* Participant List */}
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {participants.map((p) => {
           const isCurrentUser = p.id === currentUserId;
-          const isTargetHost = p.role === 'host';
-          const isTargetMod = p.role === 'moderator';
-
           return (
             <div
               key={p.id}
-              className="relative flex items-center justify-between p-2 rounded-lg bg-gray-800/40 hover:bg-gray-800/80 border border-transparent hover:border-gray-700 transition group"
+              className="flex items-center justify-between p-2 rounded-xl bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/40 transition group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center text-xs font-bold text-gray-200 uppercase shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white uppercase shrink-0">
                   {p.username.charAt(0)}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-sm font-medium text-gray-200 truncate">
+                <div className="truncate">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-gray-200 truncate">
                       {p.username}
                     </span>
                     {isCurrentUser && (
-                      <span className="text-[10px] text-gray-400 font-mono">(You)</span>
+                      <span className="text-[10px] text-gray-400">(you)</span>
                     )}
                   </div>
-                  <div className="mt-0.5">{getRoleBadge(p.role)}</div>
+                  <div>{getRoleBadge(p.role)}</div>
                 </div>
               </div>
 
@@ -156,23 +140,23 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     onClick={() =>
                       setActiveMenuUserId(activeMenuUserId === p.id ? null : p.id)
                     }
-                    className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 transition"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition cursor-pointer"
                   >
                     <MoreVertical className="w-4 h-4" />
                   </button>
 
                   {activeMenuUserId === p.id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-1 z-50 text-xs text-gray-200">
-                      {!isTargetMod ? (
+                    <div className="absolute right-0 mt-1 w-44 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-1 z-50 text-xs text-gray-200">
+                      {p.role !== 'moderator' ? (
                         <button
                           onClick={() => {
                             onAssignRole(p.id, 'moderator');
                             setActiveMenuUserId(null);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-700 flex items-center gap-2 text-sky-400"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-800 flex items-center gap-2 text-sky-400 cursor-pointer"
                         >
                           <ArrowUpRight className="w-3.5 h-3.5" />
-                          Promote to Moderator
+                          Make Moderator
                         </button>
                       ) : (
                         <button
@@ -180,45 +164,39 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                             onAssignRole(p.id, 'participant');
                             setActiveMenuUserId(null);
                           }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-700 flex items-center gap-2 text-amber-300"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-800 flex items-center gap-2 text-amber-400 cursor-pointer"
                         >
                           <ArrowDownLeft className="w-3.5 h-3.5" />
-                          Demote to Participant
+                          Demote to Viewer
                         </button>
                       )}
-
-                      {!isTargetHost && (
-                        <button
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Transfer Host role to ${p.username}? You will become a Moderator.`
-                              )
-                            ) {
-                              onTransferHost(p.id);
-                              setActiveMenuUserId(null);
-                            }
-                          }}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-700 flex items-center gap-2 text-amber-400"
-                        >
-                          <Crown className="w-3.5 h-3.5" />
-                          Transfer Host
-                        </button>
-                      )}
-
-                      <div className="my-1 border-t border-gray-700/60" />
 
                       <button
                         onClick={() => {
-                          if (window.confirm(`Kick ${p.username} from this watch party?`)) {
+                          if (window.confirm(`Transfer Host role to ${p.username}?`)) {
+                            onTransferHost(p.id);
+                            setActiveMenuUserId(null);
+                          }
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-800 flex items-center gap-2 text-amber-300 cursor-pointer"
+                      >
+                        <Crown className="w-3.5 h-3.5" />
+                        Transfer Host
+                      </button>
+
+                      <div className="my-1 border-t border-gray-800" />
+
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Remove ${p.username} from party?`)) {
                             onRemoveParticipant(p.id);
                             setActiveMenuUserId(null);
                           }
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-red-950/60 flex items-center gap-2 text-rose-400"
+                        className="w-full text-left px-3 py-2 hover:bg-rose-950 text-rose-400 flex items-center gap-2 cursor-pointer"
                       >
                         <UserMinus className="w-3.5 h-3.5" />
-                        Remove from Room
+                        Kick Participant
                       </button>
                     </div>
                   )}

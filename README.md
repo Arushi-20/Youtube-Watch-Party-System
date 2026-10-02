@@ -109,23 +109,23 @@ sequenceDiagram
 
 The backend server is architected using strict Object-Oriented Programming (OOP) principles:
 
-- **`Participant` Class (`src/models/Participant.ts`)**:
+- **`Participant` Class (`src/models/Participant.js`)**:
   - Encapsulates user entity state (`id`, `socketId`, `username`, `role`, `joinedAt`).
-  - Implements role-based action validation via `canPerform(action: ActionType): boolean`.
+  - Implements role-based action validation via `canPerform(action: string): boolean`.
   - Clean serialization (`toJSON()`).
 
-- **`Room` Class (`src/models/Room.ts`)**:
+- **`Room` Class (`src/models/Room.js`)**:
   - Manages participants map, socket-to-user mappings, video state, and chat history.
   - State Authority: calculates real-time playback position using server-side elapsed timestamps (`getCurrentPlaybackTime()`).
   - Enforces atomic state transitions: `play()`, `pause()`, `seek()`, `changeVideo()`, `assignRole()`, `transferHost()`, `kickParticipant()`.
   - Automatic host failover: selects next moderator or oldest participant when host disconnects.
 
-- **`RoomManager` Service (`src/services/RoomManager.ts`)**:
+- **`RoomManager` Service (`src/services/RoomManager.js`)**:
   - Singleton registry managing all active rooms in memory.
   - Generates unique collision-free room codes.
   - Implements automated periodic TTL garbage collection for idle, empty rooms.
 
-- **`WebSocketHandler` Controller (`src/controllers/WebSocketHandler.ts`)**:
+- **`WebSocketHandler` Controller (`src/controllers/WebSocketHandler.js`)**:
   - Decouples Socket.IO networking from business domain logic.
   - Validates payloads, handles error propagation (`permission_denied`), and emits targeted broadcasts.
 
@@ -153,9 +153,9 @@ To scale this system horizontally across multiple server nodes:
 
 ## 💻 Tech Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
+- **Frontend:** React 19 (JSX), Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
 - **Video Integration:** YouTube IFrame Player API
-- **Backend:** Node.js, Express 5, TypeScript, Socket.IO
+- **Backend:** Node.js (ES Modules), Express 5, Socket.IO
 - **Testing:** Automated integration test suite (`test-e2e.js`)
 
 ---
@@ -197,7 +197,7 @@ npm test
 
 ### 4. Build for Production
 ```bash
-# Compiles both Vite frontend and TypeScript backend:
+# Compiles Vite frontend assets:
 npm run build
 
 # Runs production server (serving frontend + WebSockets on port 5000):
@@ -238,7 +238,7 @@ docker run -p 5000:5000 youtube-watch-party
 > Unlike HTTP polling which introduces high latency and server overhead, WebSockets provide a persistent, full-duplex TCP connection. When a host plays, pauses, or scrubs the seekbar, a tiny JSON packet (~50 bytes) is pushed to the server and instantly fan-out broadcast to all room participants in under 15ms.
 
 ### 2. How does the backend prevent participants from controlling playback?
-> The backend does not rely on frontend UI hiding. In `Room.ts` and `Participant.ts`, every state change method (`play`, `pause`, `seek`, `changeVideo`) explicitly checks `participant.canPerform(action)`. If a client bypasses the UI and emits a `play` or `seek` event directly, the server intercepts it, rejects the operation, emits `permission_denied`, and refuses to broadcast `sync_state`.
+> The backend does not rely on frontend UI hiding. In `Room.js` and `Participant.js`, every state change method (`play`, `pause`, `seek`, `changeVideo`) explicitly checks `participant.canPerform(action)`. If a client bypasses the UI and emits a `play` or `seek` event directly, the server intercepts it, rejects the operation, emits `permission_denied`, and refuses to broadcast `sync_state`.
 
 ### 3. How do you prevent video stutter and playback echo loops?
 > When a client receives a `sync_state` broadcast from the server and programmatically commands `player.seekTo()` or `player.playVideo()`, the YouTube player fires an internal `onStateChange` event. Without precautions, this would cause the client to think the user initiated the change and re-emit `play` back to the server, creating an infinite feedback loop. We prevent this using an `isApplyingRemoteUpdate` reference flag. Furthermore, timestamp drifts under 1.5s are ignored to eliminate stutter caused by minor network jitter.

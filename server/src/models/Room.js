@@ -1,30 +1,16 @@
 import { Participant } from './Participant.js';
-import {
-  UserRole,
-  PlayState,
-  VideoState,
-  ParticipantData,
-  SyncStatePayload,
-  ChatMessage,
-  ControlRequest,
-} from '../types/index.js';
 
 export class Room {
-  public readonly id: string;
-  public name: string;
-  private participants: Map<string, Participant> = new Map(); // userId -> Participant
-  private socketToUser: Map<string, string> = new Map(); // socketId -> userId
-  private videoState: VideoState;
-  private chatMessages: ChatMessage[] = [];
-  private controlRequests: Map<string, ControlRequest> = new Map();
-  public readonly createdAt: number;
-
   // Default video: Blender Open Movie Project "Big Buck Bunny" or Lo-Fi Beats
-  private static DEFAULT_VIDEO_ID = 'jfKfPfyJRdk'; // lofi hip hop radio - beats to relax/study to
+  static DEFAULT_VIDEO_ID = 'jfKfPfyJRdk'; // lofi hip hop radio - beats to relax/study to
 
-  constructor(id: string, name?: string, initialVideoId?: string) {
+  constructor(id, name, initialVideoId) {
     this.id = id;
     this.name = name || `Party Room ${id}`;
+    this.participants = new Map(); // userId -> Participant
+    this.socketToUser = new Map(); // socketId -> userId
+    this.chatMessages = [];
+    this.controlRequests = new Map();
     this.createdAt = Date.now();
     this.videoState = {
       videoId: initialVideoId || Room.DEFAULT_VIDEO_ID,
@@ -38,7 +24,7 @@ export class Room {
    * Get current synchronized video playback time
    * Calculates time elapsed if video is currently playing
    */
-  public getCurrentPlaybackTime(): number {
+  getCurrentPlaybackTime() {
     if (this.videoState.playState === 'playing') {
       const elapsedSeconds = (Date.now() - this.videoState.lastUpdated) / 1000;
       return Math.max(0, this.videoState.currentTime + elapsedSeconds);
@@ -49,7 +35,7 @@ export class Room {
   /**
    * Get sync state payload
    */
-  public getSyncState(): SyncStatePayload {
+  getSyncState() {
     return {
       playState: this.videoState.playState,
       currentTime: parseFloat(this.getCurrentPlaybackTime().toFixed(2)),
@@ -60,14 +46,14 @@ export class Room {
   /**
    * Get participant by user ID
    */
-  public getParticipant(userId: string): Participant | undefined {
+  getParticipant(userId) {
     return this.participants.get(userId);
   }
 
   /**
    * Get participant by socket ID
    */
-  public getParticipantBySocketId(socketId: string): Participant | undefined {
+  getParticipantBySocketId(socketId) {
     const userId = this.socketToUser.get(socketId);
     if (!userId) return undefined;
     return this.participants.get(userId);
@@ -76,14 +62,14 @@ export class Room {
   /**
    * Get all participants formatted as JSON data
    */
-  public getAllParticipants(): ParticipantData[] {
+  getAllParticipants() {
     return Array.from(this.participants.values()).map((p) => p.toJSON());
   }
 
   /**
    * Check if room has a host
    */
-  public getHost(): Participant | undefined {
+  getHost() {
     for (const p of this.participants.values()) {
       if (p.isHost()) return p;
     }
@@ -94,7 +80,7 @@ export class Room {
    * Add a participant to the room
    * First user to join automatically becomes Host!
    */
-  public addParticipant(userId: string, socketId: string, username: string): Participant {
+  addParticipant(userId, socketId, username) {
     const existing = this.participants.get(userId);
     if (existing) {
       // Reconnection of same user
@@ -107,7 +93,7 @@ export class Room {
 
     // Determine initial role
     const isFirstParticipant = this.participants.size === 0;
-    const initialRole: UserRole = isFirstParticipant ? 'host' : 'participant';
+    const initialRole = isFirstParticipant ? 'host' : 'participant';
 
     const participant = new Participant(userId, socketId, username, initialRole);
     this.participants.set(userId, participant);
@@ -120,7 +106,7 @@ export class Room {
    * Remove a participant from the room
    * Automatically passes Host role to another member if Host leaves
    */
-  public removeParticipant(userId: string): { removed: Participant; newHost?: Participant } | null {
+  removeParticipant(userId) {
     const participant = this.participants.get(userId);
     if (!participant) return null;
 
@@ -128,7 +114,7 @@ export class Room {
     this.socketToUser.delete(participant.socketId);
     this.controlRequests.delete(userId);
 
-    let newHost: Participant | undefined = undefined;
+    let newHost = undefined;
 
     // If host left, elect a new host
     if (participant.isHost() && this.participants.size > 0) {
@@ -146,11 +132,7 @@ export class Room {
    * Assign a role to a participant
    * Host only
    */
-  public assignRole(
-    requesterId: string,
-    targetUserId: string,
-    newRole: UserRole
-  ): { success: boolean; error?: string } {
+  assignRole(requesterId, targetUserId, newRole) {
     const requester = this.participants.get(requesterId);
     if (!requester || !requester.isHost()) {
       return { success: false, error: 'Only the host can assign roles' };
@@ -177,7 +159,7 @@ export class Room {
    * Transfer host to another user
    * Host only
    */
-  public transferHost(requesterId: string, targetUserId: string): { success: boolean; error?: string } {
+  transferHost(requesterId, targetUserId) {
     const requester = this.participants.get(requesterId);
     if (!requester || !requester.isHost()) {
       return { success: false, error: 'Only the host can transfer host ownership' };
@@ -202,10 +184,7 @@ export class Room {
    * Remove a participant (Kick)
    * Host only
    */
-  public kickParticipant(
-    requesterId: string,
-    targetUserId: string
-  ): { success: boolean; error?: string; targetSocketId?: string } {
+  kickParticipant(requesterId, targetUserId) {
     const requester = this.participants.get(requesterId);
     if (!requester || !requester.isHost()) {
       return { success: false, error: 'Only the host can remove participants' };
@@ -230,7 +209,7 @@ export class Room {
    * Play playback
    * Requires Host or Moderator
    */
-  public play(requesterId: string, currentTime?: number): { success: boolean; error?: string } {
+  play(requesterId, currentTime) {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('play')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to play video' };
@@ -248,7 +227,7 @@ export class Room {
    * Pause playback
    * Requires Host or Moderator
    */
-  public pause(requesterId: string, currentTime?: number): { success: boolean; error?: string } {
+  pause(requesterId, currentTime) {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('pause')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to pause video' };
@@ -267,7 +246,7 @@ export class Room {
   /**
    * Periodic playback time sync pulse from Host/Mod
    */
-  public updatePlaybackTime(requesterId: string, currentTime: number): boolean {
+  updatePlaybackTime(requesterId, currentTime) {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('play')) {
       return false;
@@ -285,7 +264,7 @@ export class Room {
    * Seek video
    * Requires Host or Moderator
    */
-  public seek(requesterId: string, time: number): { success: boolean; error?: string } {
+  seek(requesterId, time) {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('seek')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to seek video' };
@@ -300,7 +279,7 @@ export class Room {
    * Change video
    * Requires Host or Moderator
    */
-  public changeVideo(requesterId: string, videoId: string): { success: boolean; error?: string } {
+  changeVideo(requesterId, videoId) {
     const participant = this.participants.get(requesterId);
     if (!participant || !participant.canPerform('change_video')) {
       return { success: false, error: 'Permission denied: Requires Host or Moderator role to change video' };
@@ -321,11 +300,11 @@ export class Room {
   /**
    * Add chat message
    */
-  public addChatMessage(senderId: string, text: string): ChatMessage | null {
+  addChatMessage(senderId, text) {
     const participant = this.participants.get(senderId);
     if (!participant) return null;
 
-    const message: ChatMessage = {
+    const message = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       senderId: participant.id,
       senderName: participant.username,
@@ -342,20 +321,20 @@ export class Room {
     return message;
   }
 
-  public getChatHistory(): ChatMessage[] {
+  getChatHistory() {
     return [...this.chatMessages];
   }
 
   /**
    * Request control permission
    */
-  public requestControl(userId: string): { request: ControlRequest } | null {
+  requestControl(userId) {
     const participant = this.participants.get(userId);
     if (!participant || participant.isHost() || participant.isModerator()) {
       return null;
     }
 
-    const request: ControlRequest = {
+    const request = {
       id: `req-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       userId: participant.id,
       username: participant.username,
@@ -369,11 +348,7 @@ export class Room {
   /**
    * Respond to control request
    */
-  public respondToControlRequest(
-    responderId: string,
-    requestId: string,
-    approve: boolean
-  ): { success: boolean; targetUser?: Participant; error?: string } {
+  respondToControlRequest(responderId, requestId, approve) {
     const responder = this.participants.get(responderId);
     if (!responder || (!responder.isHost() && !responder.isModerator())) {
       return { success: false, error: 'Only Host or Moderator can approve control requests' };
@@ -397,7 +372,7 @@ export class Room {
   /**
    * Check if room is empty
    */
-  public isEmpty(): boolean {
+  isEmpty() {
     return this.participants.size === 0;
   }
 }

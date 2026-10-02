@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import { Clapperboard, Copy, Check, LogOut, Crown, Shield, User, Share2 } from 'lucide-react';
-import type { UserRole } from '../types';
 
-interface NavbarProps {
-  roomId: string | null;
-  username: string;
-  userRole: UserRole | null;
-  onLeaveRoom: () => void;
-}
-
-export const Navbar: React.FC<NavbarProps> = ({
+export const Navbar = ({
   roomId,
   userRole,
   onLeaveRoom,

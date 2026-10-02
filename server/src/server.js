@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
@@ -38,7 +38,7 @@ const roomManager = RoomManager.getInstance();
 const wsHandler = new WebSocketHandler(io);
 
 // API Endpoints
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get('/api/health', (_req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -46,7 +46,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
-app.get('/api/rooms/:id', (req: Request, res: Response) => {
+app.get('/api/rooms/:id', (req, res) => {
   const paramId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const roomId = (paramId || '').toUpperCase();
   const room = roomManager.getRoom(roomId);
@@ -69,11 +69,11 @@ if (fs.existsSync(clientDistPath)) {
   console.log(`Serving static files from: ${clientDistPath}`);
   app.use(express.static(clientDistPath));
 
-  app.use((_req: Request, res: Response) => {
+  app.use((_req, res) => {
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 } else {
-  app.get('/', (_req: Request, res: Response) => {
+  app.get('/', (_req, res) => {
     res.send('YouTube Watch Party Backend is running! Run the Vite frontend or build it.');
   });
 }

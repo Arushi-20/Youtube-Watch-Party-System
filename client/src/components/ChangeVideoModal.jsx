@@ -2,24 +2,17 @@ import React, { useState } from 'react';
 import { X, Film, Play, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { extractYouTubeId } from '../utils/youtube';
 
-interface ChangeVideoModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectVideo: (videoId: string) => void;
-  currentVideoId?: string;
-}
-
-export const ChangeVideoModal: React.FC<ChangeVideoModalProps> = ({
+export const ChangeVideoModal = ({
   isOpen,
   onClose,
   onSelectVideo,
 }) => {
   const [videoInput, setVideoInput] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError(null);
     const videoId = extractYouTubeId(videoInput);

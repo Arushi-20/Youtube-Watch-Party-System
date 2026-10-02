@@ -1,18 +1,17 @@
 import { Room } from '../models/Room.js';
-import { Participant } from '../models/Participant.js';
 
 export class RoomManager {
-  private static instance: RoomManager;
-  private rooms: Map<string, Room> = new Map();
+  static instance = null;
 
-  private constructor() {
-    // Periodic garbage collection for empty rooms older than 10 minutes
+  constructor() {
+    this.rooms = new Map();
+    // Periodic garbage collection for empty rooms older than 15 minutes
     setInterval(() => {
       this.cleanupEmptyRooms();
     }, 5 * 60 * 1000);
   }
 
-  public static getInstance(): RoomManager {
+  static getInstance() {
     if (!RoomManager.instance) {
       RoomManager.instance = new RoomManager();
     }
@@ -22,7 +21,7 @@ export class RoomManager {
   /**
    * Generate clean 6-character room code (e.g. "WATCH1")
    */
-  public generateRoomCode(): string {
+  generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
     do {
@@ -37,10 +36,10 @@ export class RoomManager {
   /**
    * Create a new room
    */
-  public createRoom(roomId?: string, roomName?: string, initialVideoId?: string): Room {
+  createRoom(roomId, roomName, initialVideoId) {
     const id = roomId ? roomId.trim().toUpperCase() : this.generateRoomCode();
     if (this.rooms.has(id)) {
-      return this.rooms.get(id)!;
+      return this.rooms.get(id);
     }
     const room = new Room(id, roomName, initialVideoId);
     this.rooms.set(id, room);
@@ -50,14 +49,14 @@ export class RoomManager {
   /**
    * Get an existing room
    */
-  public getRoom(roomId: string): Room | undefined {
+  getRoom(roomId) {
     return this.rooms.get(roomId.trim().toUpperCase());
   }
 
   /**
    * Get or create a room
    */
-  public getOrCreateRoom(roomId: string, initialVideoId?: string): Room {
+  getOrCreateRoom(roomId, initialVideoId) {
     const id = roomId.trim().toUpperCase();
     let room = this.rooms.get(id);
     if (!room) {
@@ -70,14 +69,14 @@ export class RoomManager {
   /**
    * Delete room
    */
-  public removeRoom(roomId: string): boolean {
+  removeRoom(roomId) {
     return this.rooms.delete(roomId.trim().toUpperCase());
   }
 
   /**
    * Find which room and participant a socket belongs to
    */
-  public findUserAndRoomBySocketId(socketId: string): { room: Room; participant: Participant } | null {
+  findUserAndRoomBySocketId(socketId) {
     for (const room of this.rooms.values()) {
       const participant = room.getParticipantBySocketId(socketId);
       if (participant) {
@@ -90,7 +89,7 @@ export class RoomManager {
   /**
    * Clean up empty rooms
    */
-  public cleanupEmptyRooms(): number {
+  cleanupEmptyRooms() {
     let count = 0;
     const now = Date.now();
     for (const [id, room] of this.rooms.entries()) {
@@ -105,7 +104,7 @@ export class RoomManager {
   /**
    * Get system statistics
    */
-  public getStats() {
+  getStats() {
     let totalUsers = 0;
     for (const room of this.rooms.values()) {
       totalUsers += room.getAllParticipants().length;

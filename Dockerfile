@@ -1,4 +1,4 @@
-# Build Stage for Client and Server
+# Build Stage for Client
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -15,7 +15,7 @@ RUN npm run install:all
 COPY client ./client
 COPY server ./server
 
-# Build production assets
+# Build production client assets
 RUN npm run build
 
 # Production Runtime Stage
@@ -33,9 +33,9 @@ COPY server/package*.json ./server/
 # Install only production dependencies in server
 RUN npm --prefix server install --omit=dev
 
-# Copy compiled output from builder
+# Copy client dist and server source
 COPY --from=builder /app/client/dist ./client/dist
-COPY --from=builder /app/server/dist ./server/dist
+COPY server/src ./server/src
 
 EXPOSE 5000
 

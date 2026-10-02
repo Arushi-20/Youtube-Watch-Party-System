@@ -9,32 +9,26 @@ import {
   LogIn,
 } from 'lucide-react';
 
-interface LobbyViewProps {
-  initialRoomCode?: string;
-  onCreateRoom: (username: string, customCode?: string) => void;
-  onJoinRoom: (roomId: string, username: string) => void;
-}
-
-export const LobbyView: React.FC<LobbyViewProps> = ({
+export const LobbyView = ({
   initialRoomCode,
   onCreateRoom,
   onJoinRoom,
 }) => {
-  const [tab, setTab] = useState<'create' | 'join'>(initialRoomCode ? 'join' : 'create');
+  const [tab, setTab] = useState(initialRoomCode ? 'join' : 'create');
   const [username, setUsername] = useState(
     () => localStorage.getItem('watchparty_username') || ''
   );
   const [roomCode, setRoomCode] = useState(initialRoomCode || '');
   const [customCreateCode, setCustomCreateCode] = useState('');
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = (e) => {
     e.preventDefault();
     if (!username.trim()) return;
     localStorage.setItem('watchparty_username', username.trim());
     onCreateRoom(username.trim(), customCreateCode.trim() || undefined);
   };
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = (e) => {
     e.preventDefault();
     if (!username.trim() || !roomCode.trim()) return;
     localStorage.setItem('watchparty_username', username.trim());

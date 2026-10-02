@@ -5,8 +5,8 @@
   "scripts": {
     "install:all": "npm --prefix server install && npm --prefix client install",
     "build:client": "npm --prefix client run build",
-    "build:server": "npm --prefix server run build",
-    "build": "npm run build:client && npm run build:server",
+    "build:server": "node -e \"console.log('Server is pure JS, no compilation step needed')\"",
+    "build": "npm run build:client",
     "start": "npm --prefix server start",
     "test": "npm --prefix server test",
     "dev:server": "npm --prefix server run dev",
