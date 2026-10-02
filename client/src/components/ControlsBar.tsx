@@ -8,6 +8,7 @@ import {
   Key,
   Film,
   Zap,
+  Maximize,
 } from 'lucide-react';
 import type { UserRole, PlayState } from '../types';
 import { formatTime } from '../utils/youtube';
@@ -25,6 +26,7 @@ interface ControlsBarProps {
   onChangeVideoClick: () => void;
   onRequestControl: () => void;
   controlRequested: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const ControlsBar: React.FC<ControlsBarProps> = ({
@@ -40,6 +42,7 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
   onChangeVideoClick,
   onRequestControl,
   controlRequested,
+  onToggleFullscreen,
 }) => {
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubValue, setScrubValue] = useState(0);
@@ -187,6 +190,16 @@ export const ControlsBar: React.FC<ControlsBarProps> = ({
                 <span>{controlRequested ? 'Requested...' : 'Request Control'}</span>
               </button>
             </div>
+          )}
+
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              title="Fullscreen Video"
+              className="p-2.5 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 shadow-md transition active:scale-95 cursor-pointer"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>

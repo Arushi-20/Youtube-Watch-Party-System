@@ -12,22 +12,10 @@ import { Navbar } from './components/Navbar';
 import { LobbyView } from './components/LobbyView';
 import { YouTubePlayer } from './components/YouTubePlayer';
 import { ControlsBar } from './components/ControlsBar';
-import { ParticipantList } from './components/ParticipantList';
-import { ChatPanel } from './components/ChatPanel';
+import { RoomSidebar } from './components/RoomSidebar';
 import { ChangeVideoModal } from './components/ChangeVideoModal';
 import { getVideoTitle } from './utils/youtube';
-import {
-  AlertCircle,
-  ShieldAlert,
-  MessageSquare,
-  Users,
-  Maximize2,
-  Minimize2,
-  Share2,
-  Check,
-  Sparkles,
-  Zap,
-} from 'lucide-react';
+import { AlertCircle, ShieldAlert, Zap } from 'lucide-react';
 
 export function App() {
   // Navigation & User State
@@ -55,11 +43,6 @@ export function App() {
   const [driftMs, setDriftMs] = useState<number>(0);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
 
-  // UI Modes & Tabs
-  const [activeTab, setActiveTab] = useState<'chat' | 'members'>('chat');
-  const [isTheaterMode, setIsTheaterMode] = useState<boolean>(false);
-  const [copiedLink, setCopiedLink] = useState<boolean>(false);
-
   // Room Data
   const [participants, setParticipants] = useState<ParticipantData[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -71,6 +54,9 @@ export function App() {
   const [isChangeVideoOpen, setIsChangeVideoOpen] = useState<boolean>(false);
   const [kickedModal, setKickedModal] = useState<boolean>(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
+
+  // Player Fullscreen ref (fullscreen applies ONLY to the video player container)
+  const playerWrapperRef = useRef<HTMLDivElement>(null);
 
   // Check URL query parameters for direct invite link
   const [urlRoomCode] = useState<string | undefined>(() => {
@@ -199,8 +185,6 @@ export function App() {
         if (prev.some((p) => p.requestId === req.requestId)) return prev;
         return [...prev, req];
       });
-      // Automatically switch to members tab if host/mod to approve easily
-      setActiveTab('members');
     });
 
     socket.on('control_request_sent', () => {
@@ -305,18 +289,18 @@ export function App() {
     setControlRequests((prev) => prev.filter((r) => r.requestId !== requestId));
   };
 
-  const handleCopyShareLink = () => {
-    if (!roomId) return;
-    const shareUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
-    navigator.clipboard.writeText(shareUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+  // Fullscreen toggle for video player only
+  const handleToggleFullscreen = () => {
+    if (!playerWrapperRef.current) return;
+    if (!document.fullscreenElement) {
+      playerWrapperRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
   };
 
-  const isModOrHost = userRole === 'host' || userRole === 'moderator';
-
   return (
-    <div className="min-h-screen flex flex-col bg-[#070b13] text-gray-100 selection:bg-rose-500 selection:text-white">
+    <div className="h-screen max-h-screen overflow-hidden flex flex-col bg-[#070913] text-gray-100 selection:bg-pink-500 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         roomId={roomId}
@@ -334,84 +318,51 @@ export function App() {
       )}
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 overflow-hidden flex flex-col">
         {!roomId ? (
-          <LobbyView
-            initialRoomCode={urlRoomCode}
-            onCreateRoom={handleCreateRoom}
-            onJoinRoom={handleJoinRoom}
-          />
+          <div className="flex-1 overflow-y-auto">
+            <LobbyView
+              initialRoomCode={urlRoomCode}
+              onCreateRoom={handleCreateRoom}
+              onJoinRoom={handleJoinRoom}
+            />
+          </div>
         ) : (
-          <div className="flex-1 p-3 md:p-6 max-w-[1600px] mx-auto w-full flex flex-col gap-4">
-            {/* Video Header Bar */}
-            <div className="bg-gray-900/60 border border-gray-800/80 rounded-2xl px-4 py-3 shadow-lg backdrop-blur-md flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                  <span>Now Playing</span>
-                </div>
-                <h2 className="text-sm md:text-base font-bold text-white truncate max-w-md md:max-w-xl">
-                  {getVideoTitle(syncState.videoId)}
-                </h2>
-              </div>
-
-              {/* Header Right Actions */}
-              <div className="flex items-center gap-2">
-                {/* Drift / Sync Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-950/70 border border-gray-800 text-xs font-mono text-gray-300">
-                  <Zap className={`w-3.5 h-3.5 ${Math.abs(driftMs) < 200 ? 'text-emerald-400' : 'text-amber-400'}`} />
-                  <span className="hidden sm:inline">Drift:</span>
-                  <span className="font-bold text-gray-200">{Math.abs(driftMs)}ms</span>
+          <div className="flex-1 h-[calc(100vh-64px)] overflow-hidden p-3 md:p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Left 8 cols: Video + Controls (Fixed height, no outer scrolling) */}
+            <div className="lg:col-span-8 flex flex-col justify-between h-full overflow-hidden gap-2.5">
+              {/* Compact Video Header Bar */}
+              <div className="bg-[#111324]/80 border border-white/[0.08] rounded-xl px-4 py-2 shadow-sm backdrop-blur-md flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/25 text-pink-400 text-xs font-semibold shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
+                    <span>Now Playing</span>
+                  </div>
+                  <h2 className="text-xs md:text-sm font-bold text-white truncate max-w-sm sm:max-w-md">
+                    {getVideoTitle(syncState.videoId)}
+                  </h2>
                 </div>
 
-                {/* Share Link Shortcut */}
-                <button
-                  onClick={handleCopyShareLink}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-xs font-semibold transition active:scale-95 cursor-pointer"
-                >
-                  {copiedLink ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-3.5 h-3.5" />
-                      <span className="hidden md:inline">Invite Friends</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Theater Mode Toggle */}
-                <button
-                  onClick={() => setIsTheaterMode(!isTheaterMode)}
-                  title={isTheaterMode ? 'Exit Theater Mode' : 'Enter Theater Mode'}
-                  className="p-2 rounded-xl bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 transition active:scale-95 cursor-pointer"
-                >
-                  {isTheaterMode ? (
-                    <Minimize2 className="w-4 h-4" />
-                  ) : (
-                    <Maximize2 className="w-4 h-4" />
-                  )}
-                </button>
+                {/* Sub-second Sync Drift Badge */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-950/70 border border-white/[0.08] text-[11px] font-mono text-gray-300 shrink-0">
+                  <Zap
+                    className={`w-3.5 h-3.5 ${
+                      Math.abs(driftMs) < 200 ? 'text-emerald-400' : 'text-amber-400'
+                    }`}
+                  />
+                  <span>
+                    Sync:{' '}
+                    <strong className="text-gray-100">
+                      {Math.abs(driftMs)}ms
+                    </strong>
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {/* Dashboard Grid Layout */}
-            <div
-              className={`grid gap-5 flex-1 transition-all ${
-                isTheaterMode
-                  ? 'grid-cols-1'
-                  : 'grid-cols-1 lg:grid-cols-12'
-              }`}
-            >
-              {/* Left Column: Player & Controls Bar */}
-              <div
-                className={`flex flex-col gap-4 ${
-                  isTheaterMode ? 'lg:col-span-12' : 'lg:col-span-8 xl:col-span-8'
-                }`}
-              >
+              {/* Player wrapper (Fits available space without pushing screen) */}
+              <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
                 <YouTubePlayer
+                  playerWrapperRef={playerWrapperRef}
                   syncState={syncState}
                   userRole={userRole || 'participant'}
                   onPlay={handlePlay}
@@ -428,7 +379,10 @@ export function App() {
                   }}
                   reactions={reactions}
                 />
+              </div>
 
+              {/* Controls Bar (With Video Fullscreen toggle) */}
+              <div className="shrink-0">
                 <ControlsBar
                   playState={syncState.playState}
                   currentTime={localCurrentTime}
@@ -442,107 +396,26 @@ export function App() {
                   onChangeVideoClick={() => setIsChangeVideoOpen(true)}
                   onRequestControl={handleRequestControl}
                   controlRequested={controlRequested}
+                  onToggleFullscreen={handleToggleFullscreen}
                 />
               </div>
+            </div>
 
-              {/* Right Column: Unified Right Sidebar (Chat & Members) */}
-              <div
-                className={`flex flex-col ${
-                  isTheaterMode
-                    ? 'lg:col-span-12 mt-2 h-[550px]'
-                    : 'lg:col-span-4 xl:col-span-4 h-[650px] lg:h-[calc(100vh-160px)] min-h-[500px]'
-                }`}
-              >
-                <div className="bg-gray-900/80 border border-gray-800/90 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col h-full overflow-hidden">
-                  {/* Segmented Tab Switcher */}
-                  <div className="p-2 border-b border-gray-800/80 bg-gray-950/40 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => setActiveTab('chat')}
-                      className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition active:scale-95 cursor-pointer ${
-                        activeTab === 'chat'
-                          ? 'bg-gradient-to-r from-rose-600 to-rose-500 text-white shadow-lg shadow-rose-600/30'
-                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
-                      }`}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Live Chat</span>
-                      {chatMessages.length > 0 && (
-                        <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">
-                          {chatMessages.length}
-                        </span>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => setActiveTab('members')}
-                      className={`relative flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition active:scale-95 cursor-pointer ${
-                        activeTab === 'members'
-                          ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-600/30'
-                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40'
-                      }`}
-                    >
-                      <Users className="w-3.5 h-3.5" />
-                      <span>Members</span>
-                      <span className="text-[10px] bg-black/30 px-1.5 py-0.2 rounded-full font-mono">
-                        {participants.length}
-                      </span>
-                      {controlRequests.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full animate-ping" />
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Persistent Control Request Alert (if any pending) */}
-                  {isModOrHost && controlRequests.length > 0 && (
-                    <div className="p-2.5 bg-indigo-950/80 border-b border-indigo-700/50 flex items-center justify-between gap-2 animate-in fade-in duration-200">
-                      <div className="flex items-center gap-1.5 text-xs text-indigo-200">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                        <span className="font-semibold">{controlRequests[0].username}</span>
-                        <span className="text-gray-300">wants controls</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleRespondControl(controlRequests[0].requestId, true)}
-                          className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold transition cursor-pointer"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleRespondControl(controlRequests[0].requestId, false)}
-                          className="px-2 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] transition cursor-pointer"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Active Tab View */}
-                  <div className="flex-1 min-h-0">
-                    {activeTab === 'chat' ? (
-                      <ChatPanel
-                        messages={chatMessages}
-                        currentUserId={userId}
-                        hideHeader={true}
-                        onSendMessage={handleSendMessage}
-                        onSendReaction={handleSendReaction}
-                      />
-                    ) : (
-                      <ParticipantList
-                        participants={participants}
-                        currentUserId={userId}
-                        currentUserRole={userRole || 'participant'}
-                        hideHeader={true}
-                        onAssignRole={handleAssignRole}
-                        onRemoveParticipant={handleRemoveParticipant}
-                        onTransferHost={handleTransferHost}
-                        controlRequests={controlRequests}
-                        onRespondControl={handleRespondControl}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
+            {/* Right 4 cols: Combined Sidebar (In this room + Chat stacked) */}
+            <div className="lg:col-span-4 h-full overflow-hidden flex flex-col">
+              <RoomSidebar
+                participants={participants}
+                messages={chatMessages}
+                currentUserId={userId}
+                currentUserRole={userRole || 'participant'}
+                controlRequests={controlRequests}
+                onSendMessage={handleSendMessage}
+                onSendReaction={handleSendReaction}
+                onAssignRole={handleAssignRole}
+                onRemoveParticipant={handleRemoveParticipant}
+                onTransferHost={handleTransferHost}
+                onRespondControl={handleRespondControl}
+              />
             </div>
           </div>
         )}
@@ -559,7 +432,7 @@ export function App() {
       {/* Kicked Alert Modal */}
       {kickedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-gray-900 border border-rose-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
+          <div className="bg-[#121424] border border-rose-800 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center mx-auto">
               <ShieldAlert className="w-6 h-6" />
             </div>

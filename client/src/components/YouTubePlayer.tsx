@@ -9,6 +9,7 @@ declare global {
 }
 
 interface YouTubePlayerProps {
+  playerWrapperRef?: React.RefObject<HTMLDivElement | null>;
   syncState: SyncStatePayload;
   userRole: UserRole;
   onPlay: (currentTime?: number) => void;
@@ -21,6 +22,7 @@ interface YouTubePlayerProps {
 }
 
 export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
+  playerWrapperRef,
   syncState,
   userRole,
   onPlay,
@@ -259,7 +261,10 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }, [isReady, canControl, syncState.playState, onProgress, onSyncTime]);
 
   return (
-    <div className="relative w-full aspect-video bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group">
+    <div
+      ref={playerWrapperRef}
+      className="relative w-full aspect-video bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group"
+    >
       {/* Ambient Glow Backdrop */}
       <div className="absolute -inset-1 bg-gradient-to-r from-rose-600/20 via-purple-600/20 to-indigo-600/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition duration-1000 pointer-events-none -z-10" />
 

@@ -7,7 +7,6 @@ import {
   MessageSquare,
   PlusCircle,
   LogIn,
-  Dices,
 } from 'lucide-react';
 
 interface LobbyViewProps {
@@ -28,17 +27,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [roomCode, setRoomCode] = useState(initialRoomCode || '');
   const [customCreateCode, setCustomCreateCode] = useState('');
 
-  const randomNames = [
-    'Alex',
-    'Jordan',
-    'Taylor',
-    'Morgan',
-    'Sam',
-    'CosmicVoyager',
-    'NovaWatcher',
-    'EchoVibe',
-  ];
-
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
@@ -51,13 +39,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     if (!username.trim() || !roomCode.trim()) return;
     localStorage.setItem('watchparty_username', username.trim());
     onJoinRoom(roomCode.trim().toUpperCase(), username.trim());
-  };
-
-  const handleQuickDemo = () => {
-    const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
-    setUsername(randomName);
-    localStorage.setItem('watchparty_username', randomName);
-    onCreateRoom(randomName);
   };
 
   return (
@@ -219,18 +200,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 >
                   Continue
                 </button>
-
-                {/* 1-Click Quick Demo */}
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={handleQuickDemo}
-                    className="inline-flex items-center gap-1.5 text-xs text-purple-300 hover:text-pink-300 transition font-medium cursor-pointer"
-                  >
-                    <Dices className="w-3.5 h-3.5" />
-                    <span>Quick Demo Party (Instant 1-Click Host)</span>
-                  </button>
-                </div>
               </form>
             ) : (
               <form onSubmit={handleJoin} className="space-y-4">
