@@ -17,7 +17,7 @@
     "dev:client": "npm run dev --workspace=client"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.19.0"
   },
   "keywords": [
     "watch-party",
