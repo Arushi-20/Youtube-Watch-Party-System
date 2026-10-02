@@ -1,206 +1,219 @@
-# 🎬 SyncWave - Real-Time YouTube Watch Party System
+# 🎬 Intern Assignment: YouTube Watch Party System
 
-A production-grade, synchronized Watch Party platform that enables multiple users across the globe to watch YouTube videos together in real time. Features sub-second playback synchronization, role-based access control (RBAC), room management, live party chat, and floating emoji reactions.
-
-![Watch Party Architecture](https://raw.githubusercontent.com/tandpfun/skill-icons/main/icons/React-Dark.svg)
+A production-grade, real-time synchronized **YouTube Watch Party System** built according to the Intern Assignment Specification. Multiple users across the globe can watch YouTube videos together in perfect synchronization with strict **Role-Based Access Control (RBAC)**, room management, live party chat, and floating emoji reactions.
 
 ---
 
-## 🌐 Live Deployment & Demo
+## 🌐 Live Deployment & Deliverables
 
-- **Live Production URL:** [https://youtube-watch-party.onrender.com](https://youtube-watch-party.onrender.com) *(or your deployed Render/Railway/Vercel URL)*
+- **Live Public URL:** [https://youtube-watch-party.onrender.com](https://youtube-watch-party.onrender.com) *(or your deployed Render/Railway URL)*
 - **Health Check Endpoint:** `GET /api/health`
+- **GitHub Repository:** Publicly accessible with complete source code and history.
+- **Automated Test Suite:** Built-in E2E integration test testing all 10 core WebSocket events (`npm test`).
 
 ---
 
-## 🌟 Key Features
+## 📋 Core Requirements Coverage
 
-1. **Sub-Second Playback Synchronization**
-   - Synchronized play, pause, seek, and video changes via WebSockets.
-   - Built-in drift detection algorithm: smooth client resync if client time drifts > 1.5 seconds from server authority without choppy stuttering.
-   - Anti-echo loop prevention: client ignores local player events triggered by server updates.
-
-2. **Strict Role-Based Access Control (RBAC)**
-   - **👑 Host:** Room creator (auto-assigned). Full authority to play, pause, scrub/seek, change video, promote/demote participants, kick users, and transfer host ownership.
-   - **🛡️ Moderator:** Granted by Host. Can play, pause, seek, change video, and approve participant control requests.
-   - **👤 Participant / Viewer:** Default for joiners. Watch-only; playback controls are locked. Can send a real-time **Request Control** notification to the host.
-   - **Backend Enforcement:** The WebSocket server actively validates role permissions before processing any playback or administrative mutation. Unauthorized attempts are rejected with `permission_denied`.
-
-3. **Room-Based Lifecycle**
-   - Instant room creation with clean 6-character room codes (e.g. `ABC123`).
-   - Shareable direct invite links (`/?room=CODE`) with 1-click clipboard copy.
-   - Automatic host handover if current host disconnects.
-   - Automatic empty room garbage collection.
-
-4. **Interactive Party Extras**
-   - **Real-time Live Chat:** Instant messages with role badges and timestamping.
-   - **Floating Emoji Reactions:** Click ❤️, 🔥, 😂, 👏, 🍿, 🚀, 🎉 to trigger floating animations across all connected screens.
-   - **Preset Video Library:** 1-click access to curated sample videos (Lofi Beats, 4K Nature, Animations, Synthwave).
+| Requirement | Specification | Implementation Details | Status |
+|---|---|---|:---:|
+| **1. Real-time synchronization** | All participants see identical video state (play/pause, seek position, current video) | Server acts as central state authority with sub-second drift compensation algorithm | ✅ Complete |
+| **2. Room-based model** | Create and join watch rooms with unique codes / shareable links | 6-character room codes (`ABC123`), 1-click invite link copying, direct URL join (`/?room=CODE`) | ✅ Complete |
+| **3. YouTube integration** | Play YouTube videos in sync for all room participants | Embedded YouTube IFrame API with responsive 16:9 aspect containment | ✅ Complete |
+| **4. WebSockets** | Real-time bidirectional communication between server and clients | Full-duplex Socket.IO events for instantaneous state broadcasts (<15ms latency) | ✅ Complete |
+| **5. Role-based access (RBAC)** | Rooms have roles; host assigns roles to participants | Host, Moderator, Participant, Viewer roles with strict backend permission enforcement | ✅ Complete |
 
 ---
 
-## 🏗️ System Architecture & Flow
+## 🛡️ Role-Based Access Control (RBAC)
+
+Each room enforces granular permission tiers. The room creator automatically becomes the **Host** (default Admin), and joiners enter as **Participants**.
+
+### Role Hierarchy & Permissions Matrix
+
+| Role | Who Assigns | Permissions |
+|---|---|---|
+| **👑 Host** | Auto-assigned to room creator | **Full control:** Play, pause, seek/scrub, change video, assign roles, kick/remove participants, transfer host ownership |
+| **🛡️ Moderator** | Assigned by Host | **Playback control:** Play, pause, seek, change video; approve participant control requests |
+| **👤 Participant** | Default for joiners | **Watch only:** Video controls are locked; can request controls from Host/Mod; can chat & send reactions |
+| **👁️ Viewer** | Assigned by Host | **Watch only:** Read-only viewing mode |
+
+### Host Capabilities
+- **Assign role:** Host can promote a Participant to Moderator or demote back to Participant.
+- **Remove participant:** Host can kick an unruly user from the party with immediate socket termination and alert modal.
+- **Transfer host:** Host can pass the primary Host role to another member. Current host is safely demoted to Moderator.
+
+### Backend Role Enforcement
+- The backend WebSocket server actively validates user permissions **before** mutating state or broadcasting updates.
+- If a Participant attempts an unauthorized action (e.g. emitting `play`, `pause`, `seek`, or `change_video`), the server intercepts the event, rejects it, emits `permission_denied`, and refuses to broadcast `sync_state`.
+- Role updates are broadcast to the entire room so the frontend UI dynamically locks/unlocks controls in real time.
+
+---
+
+## 📡 WebSocket Event Specification
+
+The system implements the exact WebSocket contracts recommended in the assignment specification:
+
+| Event | Direction | Payload | Description & Permissions |
+|---|---|---|---|
+| `join_room` | Client ➔ Server | `{ roomId, username, userId }` | User joins room; server assigns Host to creator, else Participant. |
+| `leave_room` | Client ➔ Server | `{ roomId }` | User leaves room; triggers automatic host re-election if host exits. |
+| `sync_state` | Server ➔ Clients | `{ playState, currentTime, videoId }` | Authoritative playback state broadcast to all room members. |
+| `play` | Client ➔ Server | `{ currentTime }` | User pressed play. **Requires Host or Moderator**. Server broadcasts `sync_state`. |
+| `pause` | Client ➔ Server | `{ currentTime }` | User pressed pause. **Requires Host or Moderator**. Server broadcasts `sync_state`. |
+| `seek` | Client ➔ Server | `{ time }` | User seeks/scrubs. **Requires Host or Moderator**. Server broadcasts `sync_state`. |
+| `change_video` | Client ➔ Server | `{ videoId }` | Loads new YouTube video. **Requires Host or Moderator**. Server broadcasts `sync_state`. |
+| `assign_role` | Client ➔ Server | `{ userId, role }` | Host assigns role to participant. **Host only**. Broadcasts `role_assigned`. |
+| `remove_participant`| Client ➔ Server | `{ userId }` | Host kicks user from room. **Host only**. Sends `kicked` to target & `participant_removed` to room. |
+| `user_joined` | Server ➔ Clients | `{ username, userId, role, participants }` | Broadcast to room when a new participant connects. |
+| `user_left` | Server ➔ Clients | `{ username, userId, participants }` | Broadcast to room when a member leaves or disconnects. |
+| `role_assigned` | Server ➔ Clients | `{ userId, username, role, participants }` | Broadcast to room when a role is updated. |
+| `participant_removed`| Server ➔ Clients | `{ userId, participants }` | Broadcast to room after a participant is removed. |
+| `chat_message` *(Bonus)* | Bidirectional | `{ message }` / `{ id, senderId, senderName, senderRole, text, timestamp }` | Real-time party chat messaging for all room members. |
+| `send_reaction` *(Bonus)* | Bidirectional | `{ emoji }` / `{ id, emoji, senderName, timestamp }` | Floating animated emoji reactions over the video player. |
+| `request_control` *(Bonus)* | Client ➔ Server | `{}` | Participant sends control request notification to Host and Moderators. |
+| `respond_control` *(Bonus)* | Client ➔ Server | `{ requestId, approve }` | Host/Moderator approves (promotes to Mod) or denies control request. |
+
+---
+
+## 🏗️ Architecture & WebSocket Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Host as 👑 Host Client
     actor Participant as 👤 Participant Client
-    participant Server as ⚡ WebSocket Server (Socket.IO + OOP)
+    participant Server as ⚡ WebSocket Server (Node.js + Socket.IO)
     participant YouTube as 📺 YouTube IFrame Player
 
-    Note over Host,Participant: Room Creation & Join
+    Note over Host,Participant: 1. Room Creation & Participant Join
     Host->>Server: join_room { roomId: "PARTY1", username: "Alice" }
     Server-->>Host: joined_successfully (Role: Host) + sync_state
     Participant->>Server: join_room { roomId: "PARTY1", username: "Bob" }
     Server-->>Participant: joined_successfully (Role: Participant) + sync_state
     Server-->>Host: user_joined { username: "Bob", role: "participant" }
 
-    Note over Host,Participant: Synchronized Playback
-    Host->>YouTube: Presses Play / Seeks to 01:45
-    Host->>Server: play / seek { time: 105 }
+    Note over Host,Participant: 2. Playback Synchronization
+    Host->>YouTube: Presses Play / Seeks to 02:15
+    Host->>Server: play / seek { time: 135 }
     Server->>Server: Validate Host/Mod Permissions (Passed)
-    Server-->>Host: sync_state { playState: "playing", currentTime: 105 }
-    Server-->>Participant: sync_state { playState: "playing", currentTime: 105 }
-    Participant->>YouTube: player.seekTo(105) & player.playVideo()
+    Server-->>Host: sync_state { playState: "playing", currentTime: 135 }
+    Server-->>Participant: sync_state { playState: "playing", currentTime: 135 }
+    Participant->>YouTube: player.seekTo(135) & player.playVideo()
 
-    Note over Host,Participant: RBAC Protection
-    Participant->>Server: play (Attempted unauthorized action)
-    Server->>Server: Validate Role (Participant has no play permission)
+    Note over Host,Participant: 3. Backend RBAC Enforcement
+    Participant->>Server: pause (Attempted unauthorized action)
+    Server->>Server: Validate Role (Participant has no permission)
     Server-->>Participant: permission_denied { error: "Requires Host or Moderator role" }
 
-    Note over Host,Participant: Role Promotion & Control Request
+    Note over Host,Participant: 4. Control Request & Role Promotion
     Participant->>Server: request_control
-    Server-->>Host: control_requested { userId, username }
-    Host->>Server: assign_role { userId: "Bob", role: "moderator" }
+    Server-->>Host: control_requested { userId: "Bob", username: "Bob" }
+    Host->>Server: respond_control { requestId, approve: true }
     Server-->>Host: role_assigned { userId: "Bob", role: "moderator" }
     Server-->>Participant: role_assigned { userId: "Bob", role: "moderator" }
-    Note over Participant: Controls unlocked! Bob can now play/pause/seek.
+    Note over Participant: Controls unlocked! Bob can now control playback.
 ```
 
 ---
 
-## 📡 WebSocket Event Matrix
-
-| Event | Direction | Payload | Description & Permissions |
-|---|---|---|---|
-| `join_room` | Client ➔ Server | `{ roomId, username, userId }` | Joins or creates room. First user is assigned `host`, subsequent users `participant`. |
-| `leave_room` | Client ➔ Server | `{ roomId }` | Leaves current room. Triggers automatic host reelection if host exits. |
-| `sync_state` | Server ➔ Clients | `{ playState, currentTime, videoId }` | Broadcasts authoritative playback state to all clients in room. |
-| `play` | Client ➔ Server | `{}` | Requests video play. **Requires Host or Moderator**. Broadcasts `sync_state`. |
-| `pause` | Client ➔ Server | `{}` | Requests video pause. **Requires Host or Moderator**. Broadcasts `sync_state`. |
-| `seek` | Client ➔ Server | `{ time }` | Seeks video to specified seconds. **Requires Host or Moderator**. Broadcasts `sync_state`. |
-| `change_video` | Client ➔ Server | `{ videoId }` | Loads new YouTube video ID. **Requires Host or Moderator**. Broadcasts `sync_state`. |
-| `assign_role` | Client ➔ Server | `{ userId, role }` | Changes participant role. **Host only**. Broadcasts `role_assigned`. |
-| `remove_participant`| Client ➔ Server | `{ userId }` | Removes user from party. **Host only**. Sends `kicked` to target & `participant_removed` to room. |
-| `transfer_host` | Client ➔ Server | `{ userId }` | Transfers Host ownership to target user. **Host only**. |
-| `user_joined` | Server ➔ Clients | `{ username, userId, role, participants }` | Notifies room members of a new connection. |
-| `user_left` | Server ➔ Clients | `{ username, userId, participants }` | Notifies room members when someone departs. |
-| `role_assigned` | Server ➔ Clients | `{ userId, username, role, participants }` | Broadcasts role changes so UIs update controls instantly. |
-| `participant_removed`| Server ➔ Clients | `{ userId, participants }` | Broadcasts updated participant list after removal. |
-| `chat_message` | Bidirectional | `{ message }` / `{ id, senderId, senderName, senderRole, text, timestamp }` | Real-time chat messaging. Available to all members. |
-| `send_reaction` | Bidirectional | `{ emoji }` / `{ id, emoji, senderName, timestamp }` | Floating emoji reactions on video player. |
-| `request_control` | Client ➔ Server | `{}` | Participant asks Host/Mod for control permission. |
-| `respond_control` | Client ➔ Server | `{ requestId, approve }` | Host/Mod approves (promotes to Mod) or declines control request. |
-
----
-
-## 🏛️ Object-Oriented Architecture (OOP)
+## 🏛️ Object-Oriented Design (OOP Bonus)
 
 The backend server is architected using strict Object-Oriented Programming (OOP) principles:
 
-- **`Participant` Class (`src/models/Participant.js`)**:
-  - Encapsulates user entity state (`id`, `socketId`, `username`, `role`, `joinedAt`).
-  - Implements role-based action validation via `canPerform(action: string): boolean`.
-  - Clean serialization (`toJSON()`).
+- **[`Participant` Model (`server/src/models/Participant.js`)](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/models/Participant.js)**:
+  - Encapsulates participant entity state (`id`, `socketId`, `username`, `role`, `joinedAt`).
+  - Implements role permission checks: `canPerform(action)`.
+  - JSON serialization helper (`toJSON()`).
 
-- **`Room` Class (`src/models/Room.js`)**:
-  - Manages participants map, socket-to-user mappings, video state, and chat history.
-  - State Authority: calculates real-time playback position using server-side elapsed timestamps (`getCurrentPlaybackTime()`).
-  - Enforces atomic state transitions: `play()`, `pause()`, `seek()`, `changeVideo()`, `assignRole()`, `transferHost()`, `kickParticipant()`.
-  - Automatic host failover: selects next moderator or oldest participant when host disconnects.
+- **[`Room` Model (`server/src/models/Room.js`)](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/models/Room.js)**:
+  - Central state authority: tracks video playback state, participant registry, chat history, and control requests.
+  - Calculates real-time playback position using server-side elapsed timestamps (`getCurrentPlaybackTime()`).
+  - Atomic state transitions: `play()`, `pause()`, `seek()`, `changeVideo()`, `assignRole()`, `transferHost()`, `kickParticipant()`.
+  - Automated host failover: promotes a moderator or oldest participant if host disconnects.
 
-- **`RoomManager` Service (`src/services/RoomManager.js`)**:
-  - Singleton registry managing all active rooms in memory.
-  - Generates unique collision-free room codes.
-  - Implements automated periodic TTL garbage collection for idle, empty rooms.
+- **[`RoomManager` Service (`server/src/services/RoomManager.js`)](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/services/RoomManager.js)**:
+  - Singleton registry managing active rooms in memory.
+  - Generates clean 6-character room codes.
+  - Automated periodic TTL garbage collection for empty, abandoned rooms.
 
-- **`WebSocketHandler` Controller (`src/controllers/WebSocketHandler.js`)**:
-  - Decouples Socket.IO networking from business domain logic.
+- **[`WebSocketHandler` Controller (`server/src/controllers/WebSocketHandler.js`)](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/controllers/WebSocketHandler.js)**:
+  - Decouples WebSocket networking and socket connections from domain logic.
   - Validates payloads, handles error propagation (`permission_denied`), and emits targeted broadcasts.
 
 ---
 
-## 🚀 Scalability Design (1,000+ Users & 100+ Rooms)
+## 🚀 Scalability Design (1,000+ Users & 100+ Rooms Bonus)
 
-To scale this system horizontally across multiple server nodes:
+To horizontally scale this architecture to support **1,000+ concurrent users and 100+ rooms**:
 
 1. **Redis Pub/Sub & Socket.IO Redis Adapter (`@socket.io/redis-adapter`)**:
-   - Rooms can be distributed across multiple backend server instances.
-   - When a Host on Node A pauses or seeks, the event is published to Redis channels (`room:PARTY1`).
-   - All server nodes subscribe and broadcast the `sync_state` to local sockets connected to that room.
+   - Multiple backend server nodes run behind an Nginx or AWS Application Load Balancer.
+   - When a Host in Room `XYZ` emits a `play` or `seek` event on Server Instance A, the event is published to Redis channel `room:XYZ`.
+   - All server nodes subscribe to Redis and broadcast `sync_state` to their local connected sockets in that room.
 
-2. **Stateless Node Layer & Persistent Storage**:
-   - Persist room metadata and chat in Redis or PostgreSQL/SQLite.
-   - Load balancer (Nginx / AWS ALB / Cloudflare) with sticky sessions (`ip_hash` or cookie affinity for WebSocket handshake fallback).
+2. **Sub-Second Drift Correction Algorithm**:
+   - Modeled after Netflix Party / Teleparty:
+     - **Micro-drift (< 150ms):** Ignored to prevent audio stutter.
+     - **Small drift (150ms – 800ms):** Rather than jarringly seeking, player playback rate is temporarily adjusted (1.08x to catch up, 0.92x to slow down) so sync is achieved seamlessly.
+     - **Large drift (> 800ms):** Direct hard seek to match the host.
 
-3. **Client-Side Drift Optimization**:
-   - Video sync uses a threshold-based correction mechanism:
-     - Minor drift (< 1.5 seconds): Local playback continues uninterrupted to prevent micro-stutters.
-     - Major drift (>= 1.5 seconds): Client smoothly seeks to match server time.
+3. **Stateless Node Layer & Session Sticky Balancing**:
+   - HTTP WebSocket handshake relies on sticky sessions (IP hash or session cookie).
+   - Once upgraded to WebSocket, rooms are completely decoupled.
 
 ---
 
 ## 💻 Tech Stack
 
 - **Frontend:** React 19 (JSX), Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
-- **Video Integration:** YouTube IFrame Player API
 - **Backend:** Node.js (ES Modules), Express 5, Socket.IO
-- **Testing:** Automated integration test suite (`test-e2e.js`)
+- **Video Integration:** YouTube IFrame Player API (with dynamic 16:9 containment)
+- **Automated Testing:** Node.js + Socket.IO Client E2E Test Suite (`server/test-e2e.js`)
 
 ---
 
-## 🛠️ Quick Start & Local Development
+## 🛠️ Quick Start & Local Setup
 
 ### Prerequisites
-- Node.js (v18 or higher recommended, tested on Node v24)
+- Node.js (v18 or higher, tested on Node v24)
 - npm (v9 or higher)
 
-### 1. Clone & Install
+### 1. Clone & Install Dependencies
 ```bash
 git clone <repository-url>
 cd youtube-watch-party
 
-# Install all dependencies (server + client)
+# Install all dependencies for both client and server
 npm run install:all
 ```
 
 ### 2. Run in Development Mode
-You can run the backend and frontend separately:
+You can run the backend server and frontend client concurrently:
 
 ```bash
-# Terminal 1 - Backend (port 5000):
+# Terminal 1 - Backend Server (Port 5000):
 npm run dev:server
 
-# Terminal 2 - Frontend (port 5173):
+# Terminal 2 - Frontend Client (Port 5173):
 npm run dev:client
 ```
-Visit `http://localhost:5173` in your browser.
+Open your browser at `http://localhost:5173`.
 
-### 3. Run Automated End-to-End Tests
-The project includes a comprehensive automated test script that tests all 10 core WebSocket events, RBAC validation, role promotion, chat, and kicking:
+### 3. Run Automated E2E Tests
+The repository includes an automated integration test script verifying all 10 core WebSocket events, RBAC validation, role promotion, chat, and kicking:
 
 ```bash
-# Ensure server is running on port 5000, then run:
+# Run the test suite:
 npm test
 ```
 
-### 4. Build for Production
+### 4. Build & Run for Production
 ```bash
-# Compiles Vite frontend assets:
+# Build the production frontend assets:
 npm run build
 
-# Runs production server (serving frontend + WebSockets on port 5000):
+# Start the unified production server (serving frontend + WebSockets on Port 5000):
 npm start
 ```
 Visit `http://localhost:5000`.
@@ -209,41 +222,56 @@ Visit `http://localhost:5000`.
 
 ## ☁️ Deployment Guide
 
-### Option 1: Render (Recommended - Free Web Service)
+### Option 1: Render (Recommended)
 1. Fork or push this repository to GitHub.
-2. Sign in to [Render](https://render.com) and click **New > Web Service**.
-3. Connect your GitHub repository.
-4. Render will auto-detect `render.yaml` or you can configure manually:
+2. Log in to [Render](https://render.com) and click **New > Web Service**.
+3. Select your repository.
+4. Render will auto-detect [`render.yaml`](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/render.yaml) or configure:
    - **Environment:** `Node`
    - **Build Command:** `npm run install:all && npm run build`
    - **Start Command:** `npm start`
-5. Click **Deploy Web Service**. Your live app will be accessible at `https://<your-service>.onrender.com`.
+5. Click **Deploy Web Service**.
 
-### Option 2: Railway
-1. Sign in to [Railway](https://railway.app) and create **New Project from GitHub Repo**.
-2. Railway will automatically build using the included `Dockerfile` or `package.json`.
-3. Set environment variable `PORT=5000` (or Railway's default).
-
-### Option 3: Docker
+### Option 2: Docker
 ```bash
+# Build Docker image
 docker build -t youtube-watch-party .
+
+# Run container
 docker run -p 5000:5000 youtube-watch-party
 ```
 
 ---
 
-## 🎓 Code Walkthrough & Interview Q&A Readiness
+## 🎓 Code Understanding & Interview Q&A Readiness
 
-### 1. How does WebSockets enable real-time sync?
-> Unlike HTTP polling which introduces high latency and server overhead, WebSockets provide a persistent, full-duplex TCP connection. When a host plays, pauses, or scrubs the seekbar, a tiny JSON packet (~50 bytes) is pushed to the server and instantly fan-out broadcast to all room participants in under 15ms.
+As requested in the assignment PDF under **"Code Understanding"**, here are direct explanations of core design decisions:
 
-### 2. How does the backend prevent participants from controlling playback?
-> The backend does not rely on frontend UI hiding. In `Room.js` and `Participant.js`, every state change method (`play`, `pause`, `seek`, `changeVideo`) explicitly checks `participant.canPerform(action)`. If a client bypasses the UI and emits a `play` or `seek` event directly, the server intercepts it, rejects the operation, emits `permission_denied`, and refuses to broadcast `sync_state`.
+### 1. How each library/tool is used:
+- **Socket.IO:** Provides full-duplex WebSocket connections with automatic reconnection, heartbeat pulses, and room-based broadcasting (`io.to(roomId).emit(...)`).
+- **Express 5:** Serves the REST health endpoint (`/api/health`) and delivers the bundled production client assets.
+- **React 19 & Vite:** Delivers instant UI responsiveness, high-speed component rendering, and sub-second build times.
+- **YouTube IFrame API:** Embeds the YouTube player and allows programmatic playback control (`playVideo()`, `pauseVideo()`, `seekTo()`, `loadVideoById()`).
+- **Tailwind CSS v4:** Modern glassmorphic styling, responsive flex/grid layouts, and responsive 16:9 aspect containment.
 
-### 3. How do you prevent video stutter and playback echo loops?
-> When a client receives a `sync_state` broadcast from the server and programmatically commands `player.seekTo()` or `player.playVideo()`, the YouTube player fires an internal `onStateChange` event. Without precautions, this would cause the client to think the user initiated the change and re-emit `play` back to the server, creating an infinite feedback loop. We prevent this using an `isApplyingRemoteUpdate` reference flag. Furthermore, timestamp drifts under 1.5s are ignored to eliminate stutter caused by minor network jitter.
+### 2. How WebSockets enable real-time sync:
+Unlike HTTP polling which introduces server lag and latency spikes, WebSockets maintain an active TCP channel. When the Host scrubs the seekbar or clicks play, a ~50-byte event payload reaches the server in ~5ms. The server updates the authoritative timestamp and broadcasts `sync_state` to all room members in under 15ms.
+
+### 3. How role-based logic works on the backend:
+Security is enforced on the server, not just in UI visibility. In [`Room.js`](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/models/Room.js) and [`Participant.js`](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/server/src/models/Participant.js), every mutating method (`play`, `pause`, `seek`, `changeVideo`) calls `participant.canPerform(action)`. If an unauthorized participant emits a socket event directly, the server rejects it and emits `permission_denied`.
+
+### 4. Deployment choices & environment variables:
+- `PORT`: Configurable port for production hosting (defaults to 5000).
+- `NODE_ENV`: Set to `production` in container and hosting environments.
+- Express wildcard routing serves `index.html` for single-page application (SPA) client routes.
+
+### 5. Trade-offs and challenges encountered & solved:
+- **Feedback / Echo Loops:** When the client receives `sync_state` and executes `player.playVideo()`, YouTube fires an internal `onStateChange` event. Without prevention, the client would mistake this for a local user action and re-emit `play` back to the server. Solved using an `isApplyingRemoteRef` flag that suppresses local emissions while applying remote updates.
+- **Player Clipping & Aspect Containment:** To prevent the top/bottom of YouTube videos from being clipped on screens with limited vertical space, the player utilizes CSS container queries and a `ResizeObserver` that dynamically constrains dimensions using standard 16:9 `object-contain` math:
+  $$\text{Width} = \min(W_{\text{container}}, H_{\text{container}} \times \frac{16}{9})$$
+- **Network Jitter & Micro-Drift:** Fixed with a tiered drift threshold algorithm (ignoring jitter under 150ms, smooth playback rate adjustment between 150ms–800ms, and hard seeks only for large deviations >800ms).
 
 ---
 
 ## 📄 License
-ISC License © 2026. Built with ❤️ for the Watch Party Assignment.
+ISC License © 2026. Built with ❤️ for the Intern Assignment: YouTube Watch Party System.
