@@ -1,4 +1,4 @@
-# 🎬 Intern Assignment: YouTube Watch Party System
+# 🎬 YouTube Watch Party System
 
 A production-grade, real-time synchronized **YouTube Watch Party System** built according to the Intern Assignment Specification. Multiple users across the globe can watch YouTube videos together in perfect synchronization with strict **Role-Based Access Control (RBAC)**, room management, live party chat, and floating emoji reactions.
 
