@@ -220,26 +220,21 @@ Visit `http://localhost:5000`.
 
 ---
 
-## ☁️ Deployment Guide
+## ☁️ Deployment Guide (Render)
 
-### Option 1: Render (Recommended)
+The application is configured for deployment on **Render**:
+
 1. Fork or push this repository to GitHub.
-2. Log in to [Render](https://render.com) and click **New > Web Service**.
-3. Select your repository.
-4. Render will auto-detect [`render.yaml`](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/render.yaml) or configure:
+2. Sign in to [Render](https://render.com) and click **New > Web Service**.
+3. Connect your GitHub repository.
+4. Render will automatically detect [`render.yaml`](file:///C:/Users/Arushi/.gemini/antigravity/scratch/youtube-watch-party/render.yaml) (or you can configure manually):
    - **Environment:** `Node`
    - **Build Command:** `npm run install:all && npm run build`
    - **Start Command:** `npm start`
-5. Click **Deploy Web Service**.
-
-### Option 2: Docker
-```bash
-# Build Docker image
-docker build -t youtube-watch-party .
-
-# Run container
-docker run -p 5000:5000 youtube-watch-party
-```
+   - **Environment Variables:**
+     - `NODE_ENV`: `production`
+     - `PORT`: `10000` (Render's default port)
+5. Click **Deploy Web Service**. Your live watch party will be live at `https://<your-service-name>.onrender.com`.
 
 ---
 
