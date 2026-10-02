@@ -3,14 +3,17 @@
   "version": "1.0.0",
   "description": "Production-ready Real-Time YouTube Watch Party System with WebSockets & RBAC",
   "scripts": {
-    "install:all": "npm --prefix server install && npm --prefix client install",
+    "install:all": "npm --prefix server install && npm --prefix client install --include=dev",
     "build:client": "npm --prefix client run build",
     "build:server": "node -e \"console.log('Server is pure JS, no compilation step needed')\"",
     "build": "npm run build:client",
-    "start": "npm --prefix server start",
+    "start": "node server/src/server.js",
     "test": "npm --prefix server test",
     "dev:server": "npm --prefix server run dev",
     "dev:client": "npm --prefix client run dev"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "keywords": [
     "watch-party",
