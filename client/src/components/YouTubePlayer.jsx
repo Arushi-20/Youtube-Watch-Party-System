@@ -10,6 +10,7 @@ export const YouTubePlayer = ({
   onSyncTime,
   onProgress,
   onDriftReport,
+  onUnauthorizedClick,
   reactions,
 }) => {
   const containerRef = useRef(null);
@@ -291,6 +292,25 @@ export const YouTubePlayer = ({
         ref={containerRef}
         className="absolute inset-0 w-full h-full pointer-events-auto [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:block [&>iframe]:border-0"
       />
+
+      {/* Click-Blocker Shield for Participants & Viewers (Prevents pausing or stopping video) */}
+      {!canControl && (
+        <div
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onUnauthorizedClick) {
+              onUnauthorizedClick();
+            }
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          className="absolute inset-0 z-10 w-full h-full cursor-not-allowed select-none bg-transparent"
+          title="Playback controls are locked for participants. Only Host and Moderators can play or pause."
+        />
+      )}
 
       {/* Role Protection Banner for Participants/Viewers */}
       {!canControl && (

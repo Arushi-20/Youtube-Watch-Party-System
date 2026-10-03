@@ -167,6 +167,7 @@ export class WebSocketHandler {
 
     if (!result.success) {
       socket.emit('permission_denied', { action: 'play', error: result.error });
+      socket.emit('sync_state', room.getSyncState());
       return;
     }
 
@@ -186,6 +187,7 @@ export class WebSocketHandler {
 
     if (!result.success) {
       socket.emit('permission_denied', { action: 'pause', error: result.error });
+      socket.emit('sync_state', room.getSyncState());
       return;
     }
 

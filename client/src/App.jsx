@@ -233,14 +233,26 @@ export function App() {
   };
 
   const handlePlay = (time) => {
+    if (userRole !== 'host' && userRole !== 'moderator') {
+      showErrorToast('Playback controls are locked for participants. Only Host and Moderators can play the video.');
+      return;
+    }
     socketService.play(time);
   };
 
   const handlePause = (time) => {
+    if (userRole !== 'host' && userRole !== 'moderator') {
+      showErrorToast('Playback controls are locked for participants. Only Host and Moderators can pause the video.');
+      return;
+    }
     socketService.pause(time);
   };
 
   const handleSeek = (time) => {
+    if (userRole !== 'host' && userRole !== 'moderator') {
+      showErrorToast('Seeking is restricted. Only Host and Moderators can scrub the video.');
+      return;
+    }
     socketService.seek(time);
   };
 
@@ -249,6 +261,10 @@ export function App() {
   };
 
   const handleChangeVideo = (newVideoId) => {
+    if (userRole !== 'host' && userRole !== 'moderator') {
+      showErrorToast('Changing video is restricted to Host and Moderators.');
+      return;
+    }
     socketService.changeVideo(newVideoId);
   };
 
@@ -368,6 +384,9 @@ export function App() {
                   onDriftReport={(drift, rate) => {
                     setDriftMs(drift);
                     setPlaybackRate(rate);
+                  }}
+                  onUnauthorizedClick={() => {
+                    showErrorToast("Playback is locked for participants. Only Host and Moderators can play/pause. Use 'Request Control' below to ask the host.");
                   }}
                   reactions={reactions}
                 />

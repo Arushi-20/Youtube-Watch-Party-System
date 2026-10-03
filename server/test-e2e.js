@@ -81,6 +81,16 @@ async function runTests() {
   client2.emit('play');
   await bobDenied;
 
+  // Bob attempts unauthorized pause
+  const bobPauseDenied = new Promise((resolve) => {
+    client2.once('permission_denied', (err) => {
+      console.log(`   ✅ Server correctly rejected Participant pause: "${err.error}"`);
+      resolve(err);
+    });
+  });
+  client2.emit('pause');
+  await bobPauseDenied;
+
   // 5. Test Host Playback Control & Sync
   console.log('\n5️⃣ Testing Host Playback Control & Synchronization...');
   const syncReceived = new Promise((resolve) => {
