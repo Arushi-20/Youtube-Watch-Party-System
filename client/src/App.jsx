@@ -308,7 +308,7 @@ export function App() {
   };
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden flex flex-col bg-[#070913] text-gray-100 selection:bg-pink-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#070913] text-gray-100 selection:bg-pink-500 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         roomId={roomId}
@@ -326,7 +326,7 @@ export function App() {
       )}
 
       {/* Main Container */}
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="flex-1 flex flex-col overflow-y-auto lg:overflow-hidden">
         {!roomId ? (
           <div className="flex-1 overflow-y-auto">
             <LobbyView
@@ -336,9 +336,9 @@ export function App() {
             />
           </div>
         ) : (
-          <div className="flex-1 min-h-0 lg:h-[calc(100vh-64px)] overflow-y-auto lg:overflow-hidden p-2.5 sm:p-3 md:p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4">
+          <div className="flex-1 p-2.5 sm:p-3 md:p-4 max-w-[1700px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 lg:h-[calc(100vh-64px)] lg:overflow-hidden overflow-y-auto">
             {/* Left 8 cols: Video + Controls */}
-            <div className="lg:col-span-8 flex flex-col justify-between h-full overflow-hidden gap-2.5">
+            <div className="lg:col-span-8 flex flex-col gap-3 lg:h-full lg:justify-between lg:overflow-hidden">
               {/* Compact Video Header Bar */}
               <div className="bg-[#111324]/80 border border-white/[0.08] rounded-xl px-4 py-2 shadow-sm backdrop-blur-md flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -368,7 +368,7 @@ export function App() {
               </div>
 
               {/* Player wrapper (Fits available space without pushing screen or cutting video) */}
-              <div className="flex-1 min-h-[220px] w-full flex items-center justify-center overflow-hidden [container-type:size]">
+              <div className="w-full flex items-center justify-center overflow-hidden [container-type:size] lg:flex-1 min-h-[220px]">
                 <YouTubePlayer
                   playerWrapperRef={playerWrapperRef}
                   syncState={syncState}
@@ -413,7 +413,7 @@ export function App() {
             </div>
 
             {/* Right 4 cols: Combined Sidebar (In this room + Chat stacked) */}
-            <div className="lg:col-span-4 h-full overflow-hidden flex flex-col">
+            <div className="lg:col-span-4 flex flex-col gap-3 lg:h-full lg:overflow-hidden">
               <RoomSidebar
                 participants={participants}
                 messages={chatMessages}

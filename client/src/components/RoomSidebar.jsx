@@ -83,7 +83,7 @@ export const RoomSidebar = ({
   };
 
   return (
-    <div className="flex flex-col h-full gap-3 overflow-hidden select-none">
+    <div className="flex flex-col lg:h-full gap-3 select-none">
       {/* 1. TOP CARD: In this room (N) */}
       <div className="bg-[#111324]/90 border border-white/[0.08] rounded-2xl p-4 shadow-xl flex flex-col shrink-0 max-h-48 backdrop-blur-md">
         <h3 className="font-bold text-sm text-white mb-2.5 flex items-center justify-between">
@@ -220,7 +220,7 @@ export const RoomSidebar = ({
       </div>
 
       {/* 2. BOTTOM CARD: Chat */}
-      <div className="bg-[#111324]/90 border border-white/[0.08] rounded-2xl p-4 shadow-xl flex-1 flex flex-col min-h-0 overflow-hidden backdrop-blur-md">
+      <div className="bg-[#111324]/90 border border-white/[0.08] rounded-2xl p-4 shadow-xl flex-1 flex flex-col min-h-[380px] lg:min-h-0 overflow-hidden backdrop-blur-md">
         <h3 className="font-bold text-sm text-white mb-2 pb-2 border-b border-white/[0.06]">
           Chat
         </h3>

@@ -34,14 +34,19 @@ export const YouTubePlayer = ({
       }
       const pw = parent.clientWidth;
       const ph = parent.clientHeight;
-      if (pw > 0 && ph > 0) {
-        // Fit within available parent dimensions preserving 16:9 aspect ratio
+      const isDesktop = window.innerWidth >= 1024;
+
+      if (isDesktop && pw > 0 && ph > 0) {
+        // Desktop full viewport: fit within available parent dimensions preserving 16:9 aspect ratio
         const targetW = Math.min(pw, ph * (16 / 9));
         const targetH = targetW * (9 / 16);
         setDimensions({
           width: Math.floor(targetW),
           height: Math.floor(targetH),
         });
+      } else {
+        // Split-screen / tablet / mobile: natural full width with aspect-video (16:9)
+        setDimensions(null);
       }
     };
 
@@ -254,10 +259,10 @@ export const YouTubePlayer = ({
     <div
       ref={playerWrapperRef}
       style={{
-        width: dimensions ? `${dimensions.width}px` : 'min(100cqw, calc(100cqh * 16 / 9))',
+        width: dimensions ? `${dimensions.width}px` : '100%',
         height: dimensions ? `${dimensions.height}px` : 'auto',
       }}
-      className="relative aspect-video max-w-full max-h-full bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group shrink-0 fullscreen:w-screen fullscreen:h-screen fullscreen:max-w-none fullscreen:max-h-none fullscreen:rounded-none"
+      className="relative aspect-video w-full max-w-full max-h-full bg-gray-950 rounded-2xl overflow-hidden shadow-2xl border border-gray-800/80 group shrink-0 fullscreen:w-screen fullscreen:h-screen fullscreen:max-w-none fullscreen:max-h-none fullscreen:rounded-none"
     >
       {/* Ambient Glow Backdrop */}
       <div className="absolute -inset-1 bg-gradient-to-r from-rose-600/20 via-purple-600/20 to-indigo-600/20 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition duration-1000 pointer-events-none -z-10" />
