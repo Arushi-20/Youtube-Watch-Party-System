@@ -191,8 +191,6 @@ export const YouTubePlayer = ({
         const ytState = player.getPlayerState();
         if (syncState.playState === 'playing') {
           if (ytState !== window.YT.PlayerState.PLAYING && ytState !== window.YT.PlayerState.BUFFERING) {
-            // Seek to exact current time before playing to avoid lag
-            player.seekTo(syncState.currentTime + 0.05, true);
             player.playVideo();
           }
         } else if (syncState.playState === 'paused') {
@@ -202,42 +200,19 @@ export const YouTubePlayer = ({
           }
         }
 
-        // 3. Sub-second Drift Compensation (Netflix/Teleparty algorithm)
+        // 3. Natural Drift Compensation
+        // Only perform hard seek if drift is truly significant (>2.5s)
+        // This eliminates false buffering freezes and prevents the pause icon/overlay from showing
         const localTime = player.getCurrentTime() || 0;
-        const diff = syncState.currentTime - localTime; // positive means local is behind host
+        const diff = syncState.currentTime - localTime;
         const absDrift = Math.abs(diff);
 
-        let rate = 1.0;
-
-        if (absDrift > 0.8) {
-          // Large drift (>800ms) -> Hard seek directly to host's target position
-          player.seekTo(syncState.currentTime + 0.04, true);
-          rate = 1.0;
-          try {
-            player.setPlaybackRate(1.0);
-          } catch (e) {}
-        } else if (diff >= 0.15 && diff <= 0.8) {
-          // Behind by 150ms - 800ms -> Smooth speedup (+8%) to catch up without audio cut
-          rate = 1.08;
-          try {
-            player.setPlaybackRate(1.08);
-          } catch (e) {}
-        } else if (diff <= -0.15 && diff >= -0.8) {
-          // Ahead by 150ms - 800ms -> Smooth slowdown (-8%)
-          rate = 0.92;
-          try {
-            player.setPlaybackRate(0.92);
-          } catch (e) {}
-        } else {
-          // Within 150ms -> Perfect synchronization
-          rate = 1.0;
-          try {
-            player.setPlaybackRate(1.0);
-          } catch (e) {}
+        if (absDrift > 2.5 && syncState.playState === 'playing') {
+          player.seekTo(syncState.currentTime, true);
         }
 
         if (onDriftReport) {
-          onDriftReport(Math.round(diff * 1000), rate);
+          onDriftReport(Math.round(diff * 1000), 1.0);
         }
       }
 
@@ -262,7 +237,7 @@ export const YouTubePlayer = ({
             onProgress(current, duration);
           }
 
-          // If current user is Host/Mod and video is playing, send authoritative heartbeat pulse
+          // Authoritative heartbeat pulse from Host/Mod every 3.5s keeps all clients smoothly aligned without spamming seeks
           if (canControl && syncState.playState === 'playing' && onSyncTime) {
             onSyncTime(current);
           }
@@ -270,7 +245,7 @@ export const YouTubePlayer = ({
           // ignore
         }
       }
-    }, 1000); // 1-second pulse keeps all users locked to <100ms drift
+    }, 3500);
 
     return () => clearInterval(interval);
   }, [isReady, canControl, syncState.playState, onProgress, onSyncTime]);

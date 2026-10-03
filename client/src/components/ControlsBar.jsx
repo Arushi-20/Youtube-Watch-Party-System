@@ -140,11 +140,8 @@ export const ControlsBar = ({
 
           {/* Real-time Sub-second Sync Diagnostic Badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-950/60 border border-gray-800 text-[11px] font-mono text-gray-400">
-            <Zap className={`w-3.5 h-3.5 ${Math.abs(driftMs) < 250 ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <Zap className={`w-3.5 h-3.5 ${Math.abs(driftMs) < 500 ? 'text-emerald-400' : 'text-amber-400'}`} />
             <span>Sync: <strong className="text-gray-200">{Math.abs(driftMs)}ms</strong></span>
-            {playbackRate !== 1.0 && (
-              <span className="text-indigo-400 font-bold ml-1">({playbackRate}x catch-up)</span>
-            )}
           </div>
         </div>
 
